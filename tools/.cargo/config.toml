@@ -1,0 +1,7 @@
+[target.x86_64-pc-windows-msvc]
+rustflags = [
+    "-luser32",
+    "-lcrypt32",
+    "-ladvapi32",
+    "-lws2_32"
+]
