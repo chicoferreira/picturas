@@ -8,6 +8,6 @@ anyhow = { version = "1.0.95", features = [] }
 photon-rs = { git = "https://github.com/silvia-odwyer/photon", rev = "941adf9d2a60f9b92a2b8016b5036033dbffb192" }
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.134"
-base64 = "0.22.1"
 image = "0.24.9"
 leptess = "0.14.0"
+tokio = { version = "1.42.0", features = ["full"] }

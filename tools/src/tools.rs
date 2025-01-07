@@ -6,15 +6,15 @@ use photon_rs::{helpers, PhotonImage, Rgba};
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
 
-#[derive(Deserialize, Serialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[serde(tag = "procedure", content = "parameters", rename_all = "camelCase")]
 pub enum Tool {
     Crop { start: (u32, u32), end: (u32, u32) },
     Scale { x: u32, y: u32 },
     AddBorder { size: u32, color: (u8, u8, u8) },
     AdjustBrightness { value: u8 },
     AdjustContrast { value: f32 },
-    RotateImage { angle: f32 },
+    Rotate { angle: f32 },
     Blur { radius: i32 },
     Ocr,
 }
@@ -32,9 +32,9 @@ impl Tool {
             Tool::AddBorder { size, color } => Image(add_border(image, *size, *color)),
             Tool::AdjustBrightness { value } => Image(adjust_brightness(image, *value)),
             Tool::AdjustContrast { value } => Image(adjust_contrast(image, *value)),
-            Tool::RotateImage { angle } => Image(rotate_image(image, *angle)),
+            Tool::Rotate { angle } => Image(rotate_image(image, *angle)),
             Tool::Blur { radius } => Image(blur_image(image, *radius)),
-            Tool::Ocr => Text(orc(image)?),
+            Tool::Ocr => Text(ocr(image)?),
         })
     }
 }
@@ -73,7 +73,7 @@ fn blur_image(mut image: PhotonImage, radius: i32) -> PhotonImage {
     image
 }
 
-fn orc(image: PhotonImage) -> anyhow::Result<String> {
+fn ocr(image: PhotonImage) -> anyhow::Result<String> {
     let mut lt = leptess::LepTess::new(None, "eng").context("Couldn't initialize leptess")?;
 
     let mut img = helpers::dyn_image_from_raw(&image);
