@@ -1,53 +1,142 @@
-use crate::message::RequestMessage;
+use crate::handle::{HandleRequestError, HandleRequestResult};
+use crate::message::{
+    ErrorDetails, Metadata, OutputType, RequestMessage, ResponseMessage, ResponseMessageStatus,
+};
+use chrono::{DateTime, Utc};
+use futures_util::StreamExt;
+use lapin::{options::*, types::FieldTable, BasicProperties, Connection};
+use log::info;
+use std::sync::Arc;
+use std::time::Instant;
+use uuid::Uuid;
 
+mod handle;
 mod message;
 mod tools;
 
-async fn handle_request(request: RequestMessage) -> anyhow::Result<()> {
-    let image = photon_rs::native::open_image(request.params.image_uris.input_image_uri)
-        .expect("Failed to open image");
+const CONCURRENT_REQUESTS: u16 = 4;
+const CONSUMER_NAMES: [&str; 8] = [
+    "crop",
+    "scale",
+    "addBorder",
+    "adjustBrightness",
+    "adjustContrast",
+    "rotate",
+    "blur",
+    "ocr",
+];
 
-    let result = request
-        .params
-        .tool
-        .apply(image)
-        .expect("Failed to apply tool");
-
-    match result {
-        tools::ToolApplyResult::Image(image) => {
-            if let Some(output_image_uri) = request.params.image_uris.output_image_uri {
-                photon_rs::native::save_image(image, output_image_uri)
-                    .expect("Failed to save image");
-            } else {
-                // TODO: log ignoring output
+impl From<Result<HandleRequestResult, HandleRequestError>> for ResponseMessageStatus {
+    fn from(value: Result<HandleRequestResult, HandleRequestError>) -> Self {
+        match value {
+            Ok(request_result) => match request_result {
+                HandleRequestResult::Image(path) => {
+                    ResponseMessageStatus::Success(OutputType::Image { image_uri: path })
+                }
+                HandleRequestResult::Text(text) => {
+                    ResponseMessageStatus::Success(OutputType::Text { text })
+                }
+            },
+            Err(request_error) => {
+                let code = match request_error {
+                    HandleRequestError::ImageSaveError { .. } => "IMAGE_SAVE_ERROR",
+                    HandleRequestError::ImageOpenError { .. } => "IMAGE_OPEN_ERROR",
+                    HandleRequestError::ToolApplyError { .. } => "TOOL_APPLY_ERROR",
+                    HandleRequestError::MissingOutputPath => "MISSING_OUTPUT_PATH",
+                };
+                ResponseMessageStatus::Error(ErrorDetails {
+                    code: code.into(),
+                    message: request_error.to_string(),
+                })
             }
         }
-        tools::ToolApplyResult::Text(text) => {
-            println!("{}", text);
-        }
     }
-
-    // TODO: send reponse
-
-    Ok(())
 }
 
 #[tokio::main]
 async fn main() {
-    let input = r#"{
-        "messageId": "request-2",
-        "timestamp": "2024-11-01T12:00:00Z",
-        "procedure": "rotate",
-        "parameters": {
-            "inputImageURI": "./images/request-1.png",
-            "outputImageURI": "./images/request-2-out.jpg",
-            "angle": -90
-        }
-    }"#;
+    let addr = std::env::var("RABBITMQ_GOST").unwrap_or_else(|_| "localhost".into());
 
-    let input: RequestMessage = serde_json::from_str(input).expect("Failed to parse input");
-
-    handle_request(input)
+    let conn = Connection::connect(&addr, Default::default())
         .await
-        .expect("Failed to handle request");
+        .expect("Failed to connect to RabbitMQ");
+
+    info!("Connected to RabbitMQ at {}", addr);
+
+    let channel = Arc::new(
+        conn.create_channel()
+            .await
+            .expect("Failed to open a channel"),
+    );
+
+    channel
+        .basic_qos(CONCURRENT_REQUESTS, BasicQosOptions::default())
+        .await
+        .expect("Failed to set QoS");
+
+    let mut join_set = tokio::task::JoinSet::new();
+    for consumer_name in CONSUMER_NAMES {
+        let channel = Arc::clone(&channel);
+        let mut consumer = channel
+            .basic_consume(
+                consumer_name,
+                "tools_consumer",
+                BasicConsumeOptions::default(),
+                FieldTable::default(),
+            )
+            .await
+            .expect("Failed to register a consumer");
+
+        join_set.spawn(async move {
+            info!("Consumer {consumer:?} started");
+
+            while let Some(delivery) = consumer.next().await {
+                let instant = Instant::now();
+                let delivery = delivery.expect("Failed to consume message");
+
+                let request: RequestMessage =
+                    serde_json::from_slice(&delivery.data).expect("Failed to parse request");
+
+                info!("Received request: {:?}", request);
+                let message_id = request.message_id.clone();
+
+                let result = tokio::spawn(handle::handle_request(request)).await.unwrap();
+                let response = ResponseMessage {
+                    message_id: Uuid::new_v4().to_string(),
+                    correlation_id: message_id,
+                    timestamp: Utc::now(),
+                    status: result.into(),
+                    metadata: Metadata {
+                        processing_time: instant.elapsed().as_secs_f64(),
+                        // TODO: parameterize this in env var
+                        microservice: "tools-microservice".to_string(),
+                    },
+                };
+
+                let response = serde_json::to_vec(&response).expect("Failed to serialize response");
+
+                channel
+                    .basic_publish(
+                        // TODO: parameterize this in var
+                        "",
+                        "tools_responses",
+                        BasicPublishOptions::default(),
+                        &response,
+                        BasicProperties::default(),
+                    )
+                    .await
+                    .expect("Failed to publish response");
+
+                delivery
+                    .ack(BasicAckOptions::default())
+                    .await
+                    .expect("Failed to ack message");
+            }
+        });
+    }
+
+    tokio::select! {
+        _ = join_set.join_next() => {}
+        _ = tokio::signal::ctrl_c() => {}
+    }
 }
