@@ -52,10 +52,6 @@ async fn health_check() -> &'static str {
     "Server is running."
 }
 
-async fn get_project(Path(project_id): Path<Uuid>) -> StatusCode {
-    StatusCode::OK
-}
-
 async fn change_project(Path(project_id): Path<Uuid>) -> StatusCode {
     StatusCode::OK
 }

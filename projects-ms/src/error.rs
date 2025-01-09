@@ -7,6 +7,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     #[error("database error: {0}")]
     SqlxError(#[from] sqlx::Error),
+    #[error("entity not found")]
+    EntityNotFound,
 }
 
 impl IntoResponse for Error {
@@ -15,6 +17,7 @@ impl IntoResponse for Error {
         let body = self.to_string();
         let status = match self {
             Error::SqlxError(_) => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            Error::EntityNotFound => axum::http::StatusCode::NOT_FOUND,
         };
         (status, body).into_response()
     }

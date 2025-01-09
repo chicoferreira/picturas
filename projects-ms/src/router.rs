@@ -1,7 +1,7 @@
-use crate::project::controller::create_project;
+use crate::project::controller::{create_project, get_project};
 use crate::{
     apply_tool, change_project, create_image, delete_image, delete_project, delete_tool,
-    get_images, get_project, get_tools, health_check, AppState,
+    get_images, get_tools, health_check, AppState,
 };
 use axum::routing::{delete, get, post};
 use axum::Router;

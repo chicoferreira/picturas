@@ -54,7 +54,8 @@ pub async fn get_project(
         project_id
     )
     .fetch_one(&state.db_pool)
-    .await?;
+    .await
+    .map_err(|_| crate::error::Error::EntityNotFound)?;
 
     Ok(Json(project))
 }
