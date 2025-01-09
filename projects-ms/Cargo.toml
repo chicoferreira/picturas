@@ -4,10 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-axum = "0.8.1"
+axum = { version = "0.8.1", features = ["macros"] }
+chrono = { version = "0.4.39", features = ["serde"] }
+clap = { version = "4.5.26", features = ["env", "derive"] }
 env_logger = "0.11.6"
 log = "0.4.22"
 serde = { version = "1.0.217", features = ["derive"] }
-sqlx = "0.8.3"
+sqlx = { version = "0.8.3", features = ["chrono", "postgres", "runtime-tokio", "uuid"] }
+thiserror = "2.0.10"
 tokio = { version = "1.42.0", features = ["full"] }
-uuid = { version = "1.11.0", features = ["serde"] }
+uuid = { version = "1.11.0", features = ["serde", "v4"] }
