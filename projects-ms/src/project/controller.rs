@@ -1,30 +1,16 @@
-use crate::error::Result;
+use crate::error::{AppError, Result};
 use crate::project::model::Project;
 use crate::user::User;
 use crate::AppState;
-use axum::extract::{Path, State};
-use axum::http::StatusCode;
-use axum::{debug_handler, Json};
 use chrono::Utc;
-use serde::Deserialize;
 use uuid::Uuid;
 
-#[derive(Deserialize)]
-pub struct CreateProjectRequest {
-    name: String,
-}
-
-#[debug_handler]
-pub async fn create_project(
-    State(state): State<AppState>,
-    user: User,
-    Json(request): Json<CreateProjectRequest>,
-) -> Result<(StatusCode, Json<Project>)> {
+pub async fn create_project(owner: User, name: String, state: AppState) -> Result<Project> {
     let now = Utc::now();
     let project = Project {
         id: Uuid::new_v4(),
-        name: request.name,
-        user_id: user.uuid,
+        name,
+        user_id: owner.uuid,
         created_at: now,
         updated_at: now,
     };
@@ -40,14 +26,10 @@ pub async fn create_project(
         .execute(&state.db_pool)
         .await?;
 
-    Ok((StatusCode::CREATED, Json(project)))
+    Ok(project)
 }
 
-#[debug_handler]
-pub async fn get_project(
-    Path(project_id): Path<Uuid>,
-    State(state): State<AppState>,
-) -> Result<Json<Project>> {
+pub async fn get_project(project_id: Uuid, state: AppState) -> Result<Project> {
     let project = sqlx::query_as!(
         Project,
         "SELECT id, name, user_id, created_at, updated_at FROM projects WHERE id = $1",
@@ -55,7 +37,15 @@ pub async fn get_project(
     )
     .fetch_one(&state.db_pool)
     .await
-    .map_err(|_| crate::error::Error::EntityNotFound)?;
+    .map_err(|_| AppError::EntityNotFound)?;
 
-    Ok(Json(project))
+    Ok(project)
+}
+
+pub async fn delete_project(project_id: Uuid, state: AppState) -> Result<()> {
+    let _ = sqlx::query!("DELETE FROM projects WHERE id = $1", project_id)
+        .execute(&state.db_pool)
+        .await?;
+
+    Ok(())
 }

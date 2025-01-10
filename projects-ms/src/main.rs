@@ -1,4 +1,5 @@
 mod error;
+mod image;
 mod model;
 mod project;
 mod router;
@@ -7,12 +8,16 @@ mod user;
 use axum::extract::Path;
 use axum::http::StatusCode;
 use clap::Parser;
+use sqlx::postgres::PgConnectOptions;
 use sqlx::PgPool;
+use std::path::PathBuf;
+use std::sync::Arc;
 use uuid::Uuid;
 
 #[derive(Clone)]
 struct AppState {
     db_pool: PgPool,
+    config: Arc<Config>,
 }
 
 #[derive(Debug, Parser)]
@@ -27,6 +32,8 @@ struct Config {
     pg_password: String,
     #[arg(long, env)]
     picturas_bind_address: String,
+    #[arg(long, env)]
+    picturas_image_folder: PathBuf,
 }
 
 #[tokio::main]
@@ -35,41 +42,30 @@ async fn main() {
 
     let config = Config::parse();
 
-    let pg_pool = PgPool::connect(&format!(
-        "postgres://{}:{}@{}:{}/picturas",
-        config.pg_user, config.pg_password, config.pg_host, config.pg_port
-    ))
-    .await
-    .expect("Failed to connect to Postgres.");
+    let conn = PgConnectOptions::new()
+        .host(&config.pg_host)
+        .port(config.pg_port)
+        .username(&config.pg_user)
+        .password(&config.pg_password)
+        .database("picturas");
 
-    let state = AppState { db_pool: pg_pool };
+    let pg_pool = PgPool::connect_with(conn)
+        .await
+        .expect("Failed to connect to Postgres.");
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let bind_address = &config.picturas_bind_address;
+    let listener = tokio::net::TcpListener::bind(bind_address).await.unwrap();
+
+    let state = AppState {
+        db_pool: pg_pool,
+        config: Arc::new(config),
+    };
+
     axum::serve(listener, router::router(state)).await.unwrap();
-}
-
-async fn health_check() -> &'static str {
-    "Server is running."
 }
 
 async fn change_project(Path(project_id): Path<Uuid>) -> StatusCode {
     StatusCode::OK
-}
-
-async fn delete_project(Path(project_id): Path<Uuid>) -> StatusCode {
-    StatusCode::NO_CONTENT
-}
-
-async fn create_image(Path(project_id): Path<Uuid>) -> StatusCode {
-    StatusCode::CREATED
-}
-
-async fn get_images(Path(project_id): Path<Uuid>) -> StatusCode {
-    StatusCode::OK
-}
-
-async fn delete_image(Path(project_id): Path<Uuid>, Path(image_id): Path<Uuid>) -> StatusCode {
-    StatusCode::NO_CONTENT
 }
 
 async fn apply_tool(Path(project_id): Path<Uuid>) -> StatusCode {

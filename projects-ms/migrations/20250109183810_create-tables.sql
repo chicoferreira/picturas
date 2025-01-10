@@ -7,14 +7,14 @@ CREATE TABLE IF NOT EXISTS projects
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS image
+CREATE TABLE IF NOT EXISTS images
 (
     id         UUID PRIMARY KEY,
-    project_id UUID         NOT NULL REFERENCES projects (id),
-    uri        VARCHAR(255) NOT NULL
+    name       VARCHAR(255) NOT NULL,
+    project_id UUID         NOT NULL REFERENCES projects (id)
 );
 
-CREATE TABLE IF NOT EXISTS tool
+CREATE TABLE IF NOT EXISTS tools
 (
     id         UUID PRIMARY KEY,
     project_id UUID         NOT NULL REFERENCES projects (id),
