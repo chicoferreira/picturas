@@ -2824,7 +2824,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tools"
+name = "tools-ms"
 version = "0.1.0"
 dependencies = [
  "anyhow",
