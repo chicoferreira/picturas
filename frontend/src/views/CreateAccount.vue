@@ -1,8 +1,17 @@
 <template>
   <div class="min-h-screen flex items-center justify-center bg-[#030712] p-6">
-    <div class="w-full max-w-md space-y-6">
+    <div class="w-full max-w-md space-y-8">
+      <!-- Added Logo -->
+      <div class="text-center">
+        <h1
+          class="text-5xl font-bold bg-gradient-to-r from-[#6D28D9] to-white bg-clip-text text-transparent tracking-tight"
+        >
+          PICTURAS
+        </h1>
+      </div>
+
       <div class="space-y-2 text-center">
-        <h1 class="text-3xl font-semibold tracking-tight text-white">Create Account</h1>
+        <h2 class="text-3xl font-semibold tracking-tight text-white">Create Account</h2>
         <p class="text-[#969696]">
           Enter your email and a secure password to create your new account
         </p>
