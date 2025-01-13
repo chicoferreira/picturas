@@ -5,13 +5,16 @@ use axum::body::Bytes;
 use tokio::fs::File;
 use tokio::io::{AsyncWriteExt, BufWriter};
 use uuid::Uuid;
+use tracing::{info, instrument};
 
+#[instrument]
 pub async fn create_image(
     project_uuid: Uuid,
     image_name: String,
     image_bytes: Bytes,
     state: &AppState,
 ) -> Result<Image> {
+    info!("Creating image with name: {}", image_name);
     let uuid = Uuid::new_v4();
 
     let image = Image {
@@ -35,10 +38,13 @@ pub async fn create_image(
     .execute(&state.db_pool)
     .await?;
 
+    info!("Image created with ID: {}", image.id);
     Ok(image)
 }
 
+#[instrument]
 pub async fn get_original_images(project_uuid: Uuid, state: &AppState) -> Result<Vec<Image>> {
+    info!("Fetching original images for project ID: {}", project_uuid);
     let images = sqlx::query_as!(
         Image,
         "SELECT id, name, project_id FROM images WHERE project_id = $1",
@@ -47,14 +53,17 @@ pub async fn get_original_images(project_uuid: Uuid, state: &AppState) -> Result
     .fetch_all(&state.db_pool)
     .await?;
 
+    info!("Fetched {} images", images.len());
     Ok(images)
 }
 
+#[instrument]
 pub async fn delete_image(
     image_uuid: Uuid,
     project_uuid: Uuid,
     state: &AppState,
 ) -> Result<Option<Image>> {
+    info!("Deleting image with ID: {}", image_uuid);
     let image = sqlx::query_as!(
         Image,
         "SELECT id, name, project_id FROM images WHERE id = $1 AND project_id = $2",
@@ -74,14 +83,17 @@ pub async fn delete_image(
 
     tokio::fs::remove_file(image.get_uri(state)).await?;
 
+    info!("Deleted image with ID: {}", image.id);
     Ok(Some(image))
 }
 
+#[instrument]
 pub async fn get_image(
     project_id: Uuid,
     image_id: Uuid,
     state: &AppState,
 ) -> Result<(String, Vec<u8>)> {
+    info!("Fetching image with ID: {}", image_id);
     let image = sqlx::query_as!(
         Image,
         "SELECT id, name, project_id FROM images WHERE id = $1 AND project_id = $2",
@@ -94,5 +106,6 @@ pub async fn get_image(
     let path = image.get_uri(state);
     let file = tokio::fs::read(&path).await?;
 
+    info!("Fetched image with ID: {}", image.id);
     Ok((image.name, file))
 }

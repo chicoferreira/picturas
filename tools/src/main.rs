@@ -1,5 +1,5 @@
 use lapin::{Channel, Connection};
-use log::info;
+use tracing::info;
 use serde::Deserialize;
 use serde_inline_default::serde_inline_default;
 use std::sync::Arc;
@@ -49,7 +49,7 @@ struct Config {
 
 #[tokio::main]
 async fn main() {
-    env_logger::init();
+    tracing_subscriber::fmt::init();
 
     let config = envy::from_env::<Config>().expect("Failed to read configuration");
 

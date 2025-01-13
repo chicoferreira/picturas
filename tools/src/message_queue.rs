@@ -11,7 +11,7 @@ use lapin::options::{BasicAckOptions, BasicConsumeOptions, BasicPublishOptions, 
 use lapin::publisher_confirm::PublisherConfirm;
 use lapin::types::{FieldTable, ShortUInt};
 use lapin::{BasicProperties, Channel, Connection, Consumer};
-use log::{error, info};
+use tracing::{error, info};
 use std::sync::Arc;
 use std::time::Instant;
 use uuid::Uuid;

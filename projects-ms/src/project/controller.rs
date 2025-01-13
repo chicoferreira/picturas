@@ -4,8 +4,11 @@ use crate::user::User;
 use crate::AppState;
 use chrono::Utc;
 use uuid::Uuid;
+use tracing::{info, instrument};
 
+#[instrument]
 pub async fn create_project(owner: User, name: String, state: AppState) -> Result<Project> {
+    info!("Creating project with name: {}", name);
     let now = Utc::now();
     let project = Project {
         id: Uuid::new_v4(),
@@ -26,10 +29,13 @@ pub async fn create_project(owner: User, name: String, state: AppState) -> Resul
         .execute(&state.db_pool)
         .await?;
 
+    info!("Project created with ID: {}", project.id);
     Ok(project)
 }
 
+#[instrument]
 pub async fn get_project(project_id: Uuid, state: AppState) -> Result<Project> {
+    info!("Fetching project with ID: {}", project_id);
     let project = sqlx::query_as!(
         Project,
         "SELECT id, name, user_id, created_at, updated_at FROM projects WHERE id = $1",
@@ -39,13 +45,17 @@ pub async fn get_project(project_id: Uuid, state: AppState) -> Result<Project> {
     .await
     .map_err(|_| AppError::EntityNotFound)?;
 
+    info!("Fetched project with ID: {}", project.id);
     Ok(project)
 }
 
+#[instrument]
 pub async fn delete_project(project_id: Uuid, state: AppState) -> Result<()> {
+    info!("Deleting project with ID: {}", project_id);
     let _ = sqlx::query!("DELETE FROM projects WHERE id = $1", project_id)
         .execute(&state.db_pool)
         .await?;
 
+    info!("Deleted project with ID: {}", project_id);
     Ok(())
 }

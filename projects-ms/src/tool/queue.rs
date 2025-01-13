@@ -9,6 +9,7 @@ use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::Arc;
 use uuid::Uuid;
+use tracing::{info, error};
 
 #[derive(Debug)]
 pub struct QueuedImageApplyTool {
@@ -65,7 +66,7 @@ pub async fn run_rabbit_mq_results_read_loop(mut consumer: RabbitMqConsumer, sta
     while let Ok(message) = consumer.next_result_message().await {
         match message.status {
             ResponseStatus::Success { output } => {
-                log::info!(
+                info!(
                     "Received a success response for message {}: {:?}",
                     message.message_id,
                     output
@@ -73,7 +74,7 @@ pub async fn run_rabbit_mq_results_read_loop(mut consumer: RabbitMqConsumer, sta
                 // TODO: save image
             }
             ResponseStatus::Error { error } => {
-                log::error!(
+                error!(
                     "Received an error response for message {}: {}",
                     message.message_id,
                     error.message
@@ -83,7 +84,7 @@ pub async fn run_rabbit_mq_results_read_loop(mut consumer: RabbitMqConsumer, sta
         }
 
         let Some((_, queued_tool)) = state.queued_tools.remove(&message.message_id) else {
-            log::error!(
+            error!(
                 "Received a result for an unknown tool: {}",
                 message.message_id
             );
@@ -93,7 +94,7 @@ pub async fn run_rabbit_mq_results_read_loop(mut consumer: RabbitMqConsumer, sta
         // if there are more tools to apply, add the tool to the queue
         if !queued_tool.missing_tools.is_empty() {
             if let Err(e) = add_to_queue(queued_tool, &state).await {
-                log::error!("Failed to add tool to queue: {}", e);
+                error!("Failed to add tool to queue: {}", e);
             }
         }
     }
