@@ -25,7 +25,7 @@ pub enum AppError {
 
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
-        log::error!("{}", self);
+        tracing::error!("{}", self);
         let body = self.to_string();
         let status = match self {
             AppError::Sqlx(_) => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
