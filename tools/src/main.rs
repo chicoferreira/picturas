@@ -1,4 +1,4 @@
-use lapin::{ Channel, Connection};
+use lapin::{Channel, Connection};
 use log::info;
 use serde::Deserialize;
 use serde_inline_default::serde_inline_default;

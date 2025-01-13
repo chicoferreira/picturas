@@ -1,4 +1,4 @@
-use crate::error::{AppError, Result};
+use crate::error::Result;
 use crate::image::model::Image;
 use crate::AppState;
 use axum::body::Bytes;
@@ -38,7 +38,7 @@ pub async fn create_image(
     Ok(image)
 }
 
-pub async fn get_images(project_uuid: Uuid, state: &AppState) -> Result<Vec<Image>> {
+pub async fn get_original_images(project_uuid: Uuid, state: &AppState) -> Result<Vec<Image>> {
     let images = sqlx::query_as!(
         Image,
         "SELECT id, name, project_id FROM images WHERE project_id = $1",

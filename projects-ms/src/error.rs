@@ -1,3 +1,4 @@
+use crate::tool::amqp::rabbit_controller::RabbitMqControllerError;
 use axum::extract::multipart::MultipartError;
 use axum::response::IntoResponse;
 use thiserror::Error;
@@ -16,6 +17,8 @@ pub enum AppError {
     MultipartMissing(&'static str),
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
+    #[error("rabbitmq controller error: {0}")]
+    RabbitMq(#[from] RabbitMqControllerError),
     #[error("{0}")]
     Other(#[from] anyhow::Error),
 }
@@ -31,6 +34,7 @@ impl IntoResponse for AppError {
             AppError::MultipartMissing(_) => axum::http::StatusCode::BAD_REQUEST,
             AppError::Io(_) => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Other(_) => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::RabbitMq(_) => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
         };
         (status, body).into_response()
     }

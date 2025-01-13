@@ -56,7 +56,9 @@ async fn get_images(
     Path(project_id): Path<Uuid>,
     State(state): State<AppState>,
 ) -> Result<Json<Vec<Image>>> {
-    Ok(Json(controller::get_images(project_id, &state).await?))
+    Ok(Json(
+        controller::get_original_images(project_id, &state).await?,
+    ))
 }
 
 #[debug_handler]
