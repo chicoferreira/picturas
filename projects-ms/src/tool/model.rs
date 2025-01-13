@@ -27,7 +27,9 @@ pub struct ImageVersion {
     /// The unique identifier of the image version.
     pub id: Uuid,
     /// The image associated with the image version.
-    pub image_id: Uuid,
+    pub original_image_id: Uuid,
+    /// The project associated with the image version.
+    pub project_id: Uuid,
     /// The tool that created this image version.
     pub tool_id: Uuid,
     /// The text result of the tool if any (e.g. OCR result).
@@ -38,11 +40,23 @@ pub struct ImageVersion {
 
 impl ImageVersion {
     pub fn get_uri(&self, state: &AppState) -> PathBuf {
+        Self::generate_output_uri(self.project_id, self.original_image_id, self.id, state)
+    }
+
+    pub fn generate_output_uri(
+        project_uuid: Uuid,
+        original_image_uuid: Uuid,
+        new_image_uuid: Uuid,
+        state: &AppState,
+    ) -> PathBuf {
         state
             .config
             .picturas_image_folder
-            .join(self.image_id.to_string())
-            .join(self.id.to_string())
+            .join(project_uuid.to_string())
+            .join("output")
+            .join(original_image_uuid.to_string())
+            .join(new_image_uuid.to_string())
+            .with_extension("png")
     }
 }
 

@@ -31,31 +31,16 @@ async fn get_last_applied_tool(project_uuid: Uuid, state: &AppState) -> Result<O
     Ok(tool)
 }
 
-pub async fn get_image_versions(tool_uuid: Uuid, state: &AppState) -> Result<Vec<ImageVersion>> {
+pub async fn get_image_versions(project_id: Uuid, state: &AppState) -> Result<Vec<ImageVersion>> {
     let images = sqlx::query_as!(
         ImageVersion,
-        "SELECT id, image_id, tool_id, text_result, created_at FROM image_versions WHERE tool_id = $1",
-        tool_uuid
+        "SELECT id, original_image_id, project_id, tool_id, text_result, created_at FROM image_versions WHERE project_id = $1",
+        project_id
     )
         .fetch_all(&state.db_pool)
         .await?;
 
     Ok(images)
-}
-
-async fn insert_tool(tool: &Tool, state: &AppState) -> Result<()> {
-    sqlx::query!(
-        "INSERT INTO tools (id, project_id, position, procedure, parameters) VALUES ($1, $2, $3, $4, $5)",
-        tool.id,
-        tool.project_id,
-        tool.position,
-        tool.procedure,
-        tool.parameters
-    )
-        .execute(&state.db_pool)
-        .await?;
-
-    Ok(())
 }
 
 pub async fn add_tool(
@@ -99,24 +84,27 @@ pub async fn add_tool(
 }
 
 pub async fn apply_added_tools(project_uuid: Uuid, state: &AppState) -> Result<()> {
+    // TODO: delete older image versions
+
     let (images, tools) = tokio::join!(
         image::controller::get_original_images(project_uuid, state),
         get_applied_tools(project_uuid, state)
     );
 
-    let requested_tools: VecDeque<RequestedTool> = tools?
+    let requested_tools: VecDeque<(Uuid, RequestedTool)> = tools?
         .into_iter()
-        .filter_map(|tool| tool.try_into().ok())
+        .filter_map(|tool| Some((tool.id, tool.try_into().ok()?)))
         .collect();
 
     for image in images? {
         let image_input_uri = image.get_uri(state);
-        let project_folder = image_input_uri.parent().unwrap().to_path_buf();
 
         let queued_image_apply_tool = QueuedImageApplyTool::new_generate_output_uri(
-            project_folder,
+            project_uuid,
+            image.id,
             image_input_uri,
             requested_tools.clone(),
+            state,
         );
 
         debug!(queued_image_apply_tool = ?queued_image_apply_tool, "Queued image apply tool");
@@ -124,4 +112,40 @@ pub async fn apply_added_tools(project_uuid: Uuid, state: &AppState) -> Result<(
     }
 
     Ok(())
+}
+
+pub async fn save_image_version(image_version: &ImageVersion, state: &AppState) -> Result<()> {
+    sqlx::query!(
+        "INSERT INTO image_versions (id, original_image_id, project_id, tool_id, text_result, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+        image_version.id,
+        image_version.original_image_id,
+        image_version.project_id,
+        image_version.tool_id,
+        image_version.text_result,
+        image_version.created_at
+    )
+        .execute(&state.db_pool)
+        .await?;
+
+    Ok(())
+}
+
+pub async fn load_image_version(
+    project_id: Uuid,
+    image_version_uuid: Uuid,
+    state: &AppState,
+) -> Result<Vec<u8>> {
+    let image_version = sqlx::query_as!(
+        ImageVersion,
+        "SELECT id, original_image_id, project_id, tool_id, text_result, created_at FROM image_versions WHERE project_id = $1 AND id = $2",
+        project_id,
+        image_version_uuid
+    )
+        .fetch_one(&state.db_pool)
+        .await?;
+
+    let image_path = image_version.get_uri(state);
+    let image_data = tokio::fs::read(image_path).await?;
+
+    Ok(image_data)
 }

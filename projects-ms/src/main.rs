@@ -22,7 +22,7 @@ struct AppState {
     db_pool: PgPool,
     config: Arc<Config>,
     rabbit_mq_controller: Arc<RabbitMqController>,
-    queued_tools: Arc<DashMap<Uuid, QueuedImageApplyTool>>,
+    queued_tools: Arc<DashMap<Uuid, (Uuid, QueuedImageApplyTool)>>, // queue_uuid, (current_tool_uuid, tool)
 }
 
 #[tokio::main]

@@ -61,9 +61,19 @@ Content-Type: application/json
 {
   "procedure": "blur",
   "parameters": {
-    "radius": 2
+    "radius": 10
   }
 }
 
 ### Apply the added tools to all the images in a project
 POST http://localhost:8000/api/v1/projects/{{project}}/tools/apply
+
+### Get all image versions from a project
+GET http://localhost:8000/api/v1/projects/{{project}}/tools/images
+
+> {%
+    client.global.set("image_version", response.body[0].id);
+%}
+
+### Download an image version from a project
+GET http://localhost:8000/api/v1/projects/{{project}}/tools/images/{{image_version}}
