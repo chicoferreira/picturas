@@ -56,6 +56,7 @@ async fn get_images(
     Path(project_id): Path<Uuid>,
     State(state): State<AppState>,
 ) -> Result<Json<Vec<Image>>> {
+    // TODO: return the image path for download as well
     Ok(Json(
         controller::get_original_images(project_id, &state).await?,
     ))

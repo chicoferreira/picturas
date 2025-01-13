@@ -2,6 +2,7 @@ use crate::AppState;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::types::JsonValue;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use uuid::Uuid;
 
@@ -48,5 +49,16 @@ impl ImageVersion {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RequestedTool {
     pub procedure: String,
-    pub parameters: Vec<(String, serde_json::Value)>,
+    pub parameters: HashMap<String, serde_json::Value>,
+}
+
+impl TryInto<RequestedTool> for Tool {
+    type Error = serde_json::Error;
+
+    fn try_into(self) -> Result<RequestedTool, Self::Error> {
+        Ok(RequestedTool {
+            procedure: self.procedure,
+            parameters: serde_json::from_value(self.parameters)?,
+        })
+    }
 }

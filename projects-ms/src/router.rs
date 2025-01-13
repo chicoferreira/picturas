@@ -1,4 +1,4 @@
-use crate::{image, project, AppState};
+use crate::{image, project, tool, AppState};
 use axum::routing::get;
 use axum::Router;
 
@@ -7,12 +7,7 @@ pub fn router(state: AppState) -> Router {
         "/api/v1",
         Router::new()
             .route("/health", get(health_check))
-            // .nest(
-            //     "/projects/{project_id}",
-            //     Router::new()
-            //         .route("/tools", post(apply_tool).get(get_tools))
-            //         .route("/tools/{tool_id}", delete(delete_tool)),
-            // )
+            .merge(tool::router::router(state.clone()))
             .merge(image::router::router(state.clone()))
             .merge(project::router::router(state.clone())),
     )

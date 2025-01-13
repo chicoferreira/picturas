@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -9,7 +10,7 @@ pub struct RequestMessage {
     pub message_id: Uuid,
     pub timestamp: DateTime<Utc>,
     pub procedure: String,
-    pub parameters: Vec<(String, Value)>,
+    pub parameters: HashMap<String, Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

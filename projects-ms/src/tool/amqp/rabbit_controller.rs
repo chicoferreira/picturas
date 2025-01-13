@@ -2,7 +2,8 @@ use crate::tool::amqp::message::{RequestMessage, ResponseMessage};
 use crate::{AppState, Config};
 use futures_util::StreamExt;
 use lapin::options::{
-    BasicPublishOptions, ExchangeDeclareOptions, QueueBindOptions, QueueDeclareOptions,
+    BasicAckOptions, BasicPublishOptions, ExchangeDeclareOptions, QueueBindOptions,
+    QueueDeclareOptions,
 };
 use lapin::types::FieldTable;
 use lapin::{BasicProperties, Channel, Connection, Consumer, ExchangeKind};
@@ -86,7 +87,11 @@ impl RabbitMqConsumer {
     ) -> Result<ResponseMessage, RabbitMqControllerError> {
         let delivery = self.consumer.next().await;
         match delivery {
-            Some(Ok(delivery)) => Ok(serde_json::from_slice(&delivery.data)?),
+            Some(Ok(delivery)) => {
+                let message = serde_json::from_slice(&delivery.data)?;
+                delivery.ack(BasicAckOptions::default()).await?;
+                Ok(message)
+            }
             Some(Err(error)) => Err(RabbitMqControllerError::LapinError(error)),
             None => Err(RabbitMqControllerError::EmptyIterator),
         }

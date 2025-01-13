@@ -6,32 +6,61 @@ use crate::AppState;
 use chrono::Utc;
 use serde_json::json;
 use std::collections::VecDeque;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::{error, info};
 use uuid::Uuid;
 
 #[derive(Debug)]
 pub struct QueuedImageApplyTool {
-    pub uuid: Uuid,
-    pub image_uri: PathBuf,
+    pub new_image_uuid: Uuid,
+    pub project_folder: PathBuf,
+    pub image_input_uri: PathBuf,
+    pub image_output_uri: PathBuf,
     pub missing_tools: VecDeque<RequestedTool>,
 }
 
+impl QueuedImageApplyTool {
+    pub fn new_generate_output_uri(
+        project_folder: PathBuf,
+        image_input_uri: PathBuf,
+        missing_tools: VecDeque<RequestedTool>,
+    ) -> Self {
+        let new_image_uuid = Uuid::new_v4();
+        let image_output_uri = project_folder
+            .join("output")
+            .join(new_image_uuid.to_string())
+            .with_extension("png");
+
+        Self {
+            project_folder,
+            new_image_uuid,
+            image_input_uri,
+            image_output_uri,
+            missing_tools,
+        }
+    }
+}
+
 async fn send_request_to_rabbitmq(
-    image_path: PathBuf,
+    image_input_path: &Path,
+    image_output_path: &Path,
     tool: &RequestedTool,
     state: &AppState,
 ) -> Result<Uuid, RabbitMqControllerError> {
-    let uuid = Uuid::new_v4();
+    let message_uuid = Uuid::new_v4();
 
     let mut parameters = tool.parameters.clone();
-    parameters.push((
+    parameters.insert(
         "inputImageURI".to_string(),
-        json!(image_path.to_string_lossy().to_string()),
-    ));
+        json!(image_input_path.to_string_lossy().to_string()),
+    );
+    parameters.insert(
+        "outputImageURI".to_string(),
+        json!(image_output_path.to_string_lossy().to_string()),
+    );
 
     let message = amqp::message::RequestMessage {
-        message_id: uuid,
+        message_id: message_uuid,
         timestamp: Utc::now(),
         procedure: tool.procedure.clone(),
         parameters,
@@ -39,7 +68,7 @@ async fn send_request_to_rabbitmq(
 
     state.rabbit_mq_controller.publish_request(message).await?;
 
-    Ok(uuid)
+    Ok(message_uuid)
 }
 
 pub async fn add_to_queue(
@@ -51,8 +80,11 @@ pub async fn add_to_queue(
         return Ok(());
     };
 
-    let image_path = queued_image_apply_tool.image_uri.clone();
-    let message_id = send_request_to_rabbitmq(image_path, &tool, state).await?;
+    let image_input_path = &queued_image_apply_tool.image_input_uri;
+    let image_output_path = &queued_image_apply_tool.image_output_uri;
+
+    let message_id =
+        send_request_to_rabbitmq(image_input_path, image_output_path, &tool, state).await?;
 
     state
         .queued_tools
@@ -63,6 +95,14 @@ pub async fn add_to_queue(
 
 pub async fn run_rabbit_mq_results_read_loop(mut consumer: RabbitMqConsumer, state: AppState) {
     while let Ok(message) = consumer.next_result_message().await {
+        let Some((_, queued_tool)) = state.queued_tools.remove(&message.correlation_id) else {
+            error!(
+                "Received a result for an unknown tool: {}",
+                message.correlation_id
+            );
+            continue;
+        };
+
         match message.status {
             ResponseStatus::Success { output } => {
                 info!(
@@ -76,20 +116,17 @@ pub async fn run_rabbit_mq_results_read_loop(mut consumer: RabbitMqConsumer, sta
                     "Received an error response for message {}: {}",
                     message.message_id, error.message
                 );
-                // TODO: notify user
             }
         }
 
-        let Some((_, queued_tool)) = state.queued_tools.remove(&message.message_id) else {
-            error!(
-                "Received a result for an unknown tool: {}",
-                message.message_id
-            );
-            continue;
-        };
-
         // if there are more tools to apply, add the tool to the queue
         if !queued_tool.missing_tools.is_empty() {
+            let queued_tool = QueuedImageApplyTool::new_generate_output_uri(
+                queued_tool.project_folder,
+                queued_tool.image_output_uri, // now the new input will be the output of the previous tool
+                queued_tool.missing_tools,
+            );
+
             if let Err(e) = add_to_queue(queued_tool, &state).await {
                 error!("Failed to add tool to queue: {}", e);
             }

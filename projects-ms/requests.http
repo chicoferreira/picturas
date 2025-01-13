@@ -10,7 +10,7 @@ x-user-email: mail@chicoferreira.dev
 }
 
 > {%
-  client.global.set("project", response.body.id);
+    client.global.set("project", response.body.id);
 %}
 
 ### Gets a project
@@ -39,7 +39,7 @@ Content-Type: image/png
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--
 
 > {%
-  client.global.set("image", response.body[0].id);
+    client.global.set("image", response.body[0].id);
 %}
 
 ### Gets an image from a project
@@ -50,3 +50,20 @@ GET http://localhost:8000/api/v1/projects/{{project}}/images
 
 ### Deletes an image from a project
 DELETE http://localhost:8000/api/v1/projects/{{project}}/images/{{image}}
+
+### Get all tools applied to a project
+GET http://localhost:8000/api/v1/projects/{{project}}/tools
+
+### Add a tool to a project
+POST http://localhost:8000/api/v1/projects/{{project}}/tools
+Content-Type: application/json
+
+{
+  "procedure": "blur",
+  "parameters": {
+    "radius": 2
+  }
+}
+
+### Apply the added tools to all the images in a project
+POST http://localhost:8000/api/v1/projects/{{project}}/tools/apply

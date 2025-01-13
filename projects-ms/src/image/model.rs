@@ -16,10 +16,13 @@ pub struct Image {
 
 impl Image {
     pub fn get_uri(&self, state: &AppState) -> PathBuf {
+        let buf = PathBuf::from(&self.name);
+        let extension_from_name = buf.extension().unwrap_or_default();
         state
             .config
             .picturas_image_folder
             .join(self.project_id.to_string())
             .join(self.id.to_string())
+            .with_extension(extension_from_name)
     }
 }

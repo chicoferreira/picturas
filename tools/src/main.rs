@@ -41,7 +41,7 @@ struct Config {
     picturas_concurrent_requests: u16,
     #[serde_inline_default("picturas-multiple-tools-ms".into())]
     picturas_microservice_name: String,
-    #[serde_inline_default("picturas-results".into())]
+    #[serde_inline_default("picturas.tools".into())]
     picturas_results_exchange: String,
     #[serde_inline_default("results".into())]
     picturas_results_routing_key: String,

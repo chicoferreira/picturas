@@ -4,7 +4,7 @@ use crate::tool::queue;
 use crate::tool::queue::QueuedImageApplyTool;
 use crate::{image, AppState};
 use std::collections::VecDeque;
-use std::path::PathBuf;
+use tracing::{debug, info};
 use uuid::Uuid;
 
 pub async fn get_applied_tools(project_uuid: Uuid, state: &AppState) -> Result<Vec<Tool>> {
@@ -62,7 +62,11 @@ pub async fn add_tool(
     project_uuid: Uuid,
     requested_tool: RequestedTool,
     state: &AppState,
-) -> Result<()> {
+) -> Result<Tool> {
+    info!(
+        tool = ?requested_tool,
+        "Adding tool to project: {}", project_uuid
+    );
     let last_applied_tool = get_last_applied_tool(project_uuid, state).await?;
 
     let last_position = match &last_applied_tool {
@@ -70,21 +74,7 @@ pub async fn add_tool(
         Some(last_applied_tool) => last_applied_tool.position,
     };
 
-    let images_uri_to_apply_tool: Vec<PathBuf> = match last_applied_tool {
-        None => {
-            // If there is no tool applied yet, we need to apply the tool to the original images
-            let images = image::controller::get_original_images(project_uuid, state).await?;
-            images.iter().map(|image| image.get_uri(state)).collect()
-        }
-        Some(last_applied_tool) => {
-            // If there is a tool applied, we need to apply the tool to the images created by the last tool
-            let last_image_versions = get_image_versions(last_applied_tool.id, state).await?;
-            last_image_versions
-                .iter()
-                .map(|image_version| image_version.get_uri(state))
-                .collect()
-        }
-    };
+    debug!(last_position, "Last position");
 
     let tool = Tool {
         id: Uuid::new_v4(),
@@ -94,15 +84,42 @@ pub async fn add_tool(
         parameters: serde_json::to_value(requested_tool.parameters.clone()).unwrap(),
     };
 
-    insert_tool(&tool, state).await?;
+    sqlx::query!(
+        "INSERT INTO tools (id, project_id, position, procedure, parameters) VALUES ($1, $2, $3, $4, $5)",
+        tool.id,
+        tool.project_id,
+        tool.position,
+        tool.procedure,
+        tool.parameters
+    )
+        .execute(&state.db_pool)
+        .await?;
 
-    for image in images_uri_to_apply_tool {
-        let queued_image_apply_tool = QueuedImageApplyTool {
-            uuid: Uuid::new_v4(),
-            image_uri: image,
-            missing_tools: VecDeque::from(vec![requested_tool.clone()]),
-        };
+    Ok(tool)
+}
 
+pub async fn apply_added_tools(project_uuid: Uuid, state: &AppState) -> Result<()> {
+    let (images, tools) = tokio::join!(
+        image::controller::get_original_images(project_uuid, state),
+        get_applied_tools(project_uuid, state)
+    );
+
+    let requested_tools: VecDeque<RequestedTool> = tools?
+        .into_iter()
+        .filter_map(|tool| tool.try_into().ok())
+        .collect();
+
+    for image in images? {
+        let image_input_uri = image.get_uri(state);
+        let project_folder = image_input_uri.parent().unwrap().to_path_buf();
+
+        let queued_image_apply_tool = QueuedImageApplyTool::new_generate_output_uri(
+            project_folder,
+            image_input_uri,
+            requested_tools.clone(),
+        );
+
+        debug!(queued_image_apply_tool = ?queued_image_apply_tool, "Queued image apply tool");
         queue::add_to_queue(queued_image_apply_tool, state).await?;
     }
 
