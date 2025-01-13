@@ -14,6 +14,7 @@ use dashmap::DashMap;
 use sqlx::postgres::PgConnectOptions;
 use sqlx::PgPool;
 use std::sync::Arc;
+use tower_http::trace::TraceLayer;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -57,7 +58,7 @@ async fn main() {
 
     tokio::select! {
         _ = tool::queue::run_rabbit_mq_results_read_loop(rabbit_mq_consumer, state.clone()) => {}
-        _ = axum::serve(listener, router::router(state)) => {}
+        _ = axum::serve(listener, router::router(state).layer(TraceLayer::new_for_http())) => {}
     }
 }
 
