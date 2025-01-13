@@ -8,6 +8,7 @@ use lapin::types::FieldTable;
 use lapin::{BasicProperties, Channel, Connection, Consumer, ExchangeKind};
 use std::collections::HashMap;
 use thiserror::Error;
+use tracing::info;
 
 #[derive(Debug, Clone)]
 pub struct ToolQueue {
@@ -43,12 +44,11 @@ impl RabbitMqController {
     }
 
     pub async fn create_consumer(&self, state: &AppState) -> RabbitMqConsumer {
-        let consumer = create_results_consumer(
-            &self.channel,
-            &state.config.rabbitmq_results_exchange,
-            &state.config.rabbitmq_results_routing_key,
-        )
-        .await;
+        let exchange = &state.config.rabbitmq_results_exchange;
+        let routing_key = &state.config.rabbitmq_results_routing_key;
+        let consumer = create_results_consumer(&self.channel, exchange, &routing_key).await;
+
+        info!(exchange, routing_key, "Created consumer");
 
         RabbitMqConsumer { consumer }
     }
@@ -99,19 +99,27 @@ async fn connect(concurrent_requests: u16, config: &Config) -> (Connection, Chan
         config.rabbitmq_user, config.rabbitmq_password, config.rabbitmq_host, config.rabbitmq_port
     );
 
+    info!(uri = amqp_uri, "Connecting to RabbitMQ");
+
     let connection = Connection::connect(&amqp_uri, Default::default())
         .await
         .expect("Failed to connect to RabbitMQ");
+
+    info!("Connected to RabbitMQ");
 
     let channel = connection
         .create_channel()
         .await
         .expect("Failed to open a channel");
 
+    info!("Created channel");
+
     channel
         .basic_qos(concurrent_requests, Default::default())
         .await
         .expect("Failed to set QoS");
+
+    info!(concurrent_requests, "Set QoS");
 
     (connection, channel)
 }
@@ -130,6 +138,8 @@ async fn setup_exchange_and_queues(channel: &Channel, exchange: &str, tool_queue
         .await
         .expect("Failed to declare the exchange");
 
+    info!(exchange, "Declared exchange");
+
     for tool in tool_queues {
         channel
             .queue_declare(
@@ -143,6 +153,8 @@ async fn setup_exchange_and_queues(channel: &Channel, exchange: &str, tool_queue
             .await
             .expect("Failed to declare the queue");
 
+        info!(tool.name, "Declared durable queue");
+
         channel
             .queue_bind(
                 &tool.name,
@@ -153,6 +165,8 @@ async fn setup_exchange_and_queues(channel: &Channel, exchange: &str, tool_queue
             )
             .await
             .expect("Failed to bind queue to exchange");
+
+        info!(tool.name, tool.routing_key, "Bound queue to exchange");
     }
 }
 
@@ -174,6 +188,8 @@ async fn create_results_consumer(
         .await
         .expect("Failed to declare the results queue");
 
+    info!(RESULTS_QUEUE, "Declared results queue");
+
     channel
         .queue_bind(
             RESULTS_QUEUE,
@@ -184,6 +200,11 @@ async fn create_results_consumer(
         )
         .await
         .expect("Failed to bind results queue to exchange");
+
+    info!(
+        RESULTS_QUEUE,
+        exchange, results_routing_key, "Bound results queue to exchange"
+    );
 
     channel
         .basic_consume(RESULTS_QUEUE, "", Default::default(), FieldTable::default())

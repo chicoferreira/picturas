@@ -33,12 +33,7 @@ pub struct Config {
 }
 
 fn parse_tool_queue(src: &str) -> Result<ToolQueue, String> {
-    let Some((name, routing_key)) = src.split_once(':') else {
-        return Err(format!(
-            "ToolQueue must be in 'name:routing_key' format, got: {}",
-            src
-        ));
-    };
+    let (name, routing_key) = src.split_once(':').unwrap_or((src, src));
     Ok(ToolQueue {
         name: name.to_string(),
         routing_key: routing_key.to_string(),

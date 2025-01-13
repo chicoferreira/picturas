@@ -4,10 +4,9 @@ use crate::AppState;
 use axum::body::Bytes;
 use tokio::fs::File;
 use tokio::io::{AsyncWriteExt, BufWriter};
+use tracing::info;
 use uuid::Uuid;
-use tracing::{info, instrument};
 
-#[instrument]
 pub async fn create_image(
     project_uuid: Uuid,
     image_name: String,
@@ -38,11 +37,14 @@ pub async fn create_image(
     .execute(&state.db_pool)
     .await?;
 
-    info!("Image created with ID: {}", image.id);
+    info!(
+        id = ?image.id,
+        path = ?path,
+        "Image created"
+    );
     Ok(image)
 }
 
-#[instrument]
 pub async fn get_original_images(project_uuid: Uuid, state: &AppState) -> Result<Vec<Image>> {
     info!("Fetching original images for project ID: {}", project_uuid);
     let images = sqlx::query_as!(
@@ -57,7 +59,6 @@ pub async fn get_original_images(project_uuid: Uuid, state: &AppState) -> Result
     Ok(images)
 }
 
-#[instrument]
 pub async fn delete_image(
     image_uuid: Uuid,
     project_uuid: Uuid,
@@ -83,11 +84,13 @@ pub async fn delete_image(
 
     tokio::fs::remove_file(image.get_uri(state)).await?;
 
-    info!("Deleted image with ID: {}", image.id);
+    info!(
+        id = ?image.id,
+        "Deleted image"
+    );
     Ok(Some(image))
 }
 
-#[instrument]
 pub async fn get_image(
     project_id: Uuid,
     image_id: Uuid,
@@ -106,6 +109,10 @@ pub async fn get_image(
     let path = image.get_uri(state);
     let file = tokio::fs::read(&path).await?;
 
-    info!("Fetched image with ID: {}", image.id);
+    info!(
+        id = ?image.id,
+        path = ?path,
+        "Fetched image"
+    );
     Ok((image.name, file))
 }

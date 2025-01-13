@@ -1,15 +1,14 @@
 use crate::tool::amqp;
 use crate::tool::amqp::message::ResponseStatus;
 use crate::tool::amqp::rabbit_controller::{RabbitMqConsumer, RabbitMqControllerError};
-use crate::tool::model::{RequestedTool, Tool};
+use crate::tool::model::RequestedTool;
 use crate::AppState;
 use chrono::Utc;
 use serde_json::json;
 use std::collections::VecDeque;
 use std::path::PathBuf;
-use std::sync::Arc;
+use tracing::{error, info};
 use uuid::Uuid;
-use tracing::{info, error};
 
 #[derive(Debug)]
 pub struct QueuedImageApplyTool {
@@ -68,16 +67,14 @@ pub async fn run_rabbit_mq_results_read_loop(mut consumer: RabbitMqConsumer, sta
             ResponseStatus::Success { output } => {
                 info!(
                     "Received a success response for message {}: {:?}",
-                    message.message_id,
-                    output
+                    message.message_id, output
                 );
                 // TODO: save image
             }
             ResponseStatus::Error { error } => {
                 error!(
                     "Received an error response for message {}: {}",
-                    message.message_id,
-                    error.message
+                    message.message_id, error.message
                 );
                 // TODO: notify user
             }

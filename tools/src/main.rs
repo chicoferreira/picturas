@@ -1,8 +1,8 @@
 use lapin::{Channel, Connection};
-use tracing::info;
 use serde::Deserialize;
 use serde_inline_default::serde_inline_default;
 use std::sync::Arc;
+use tracing::info;
 
 mod handle;
 mod message;
@@ -37,7 +37,7 @@ struct Config {
     #[serde_inline_default("guest".into())]
     rabbitmq_password: String,
     picturas_available_tools: Vec<String>,
-    #[serde_inline_default(42)]
+    #[serde_inline_default(8)]
     picturas_concurrent_requests: u16,
     #[serde_inline_default("picturas-multiple-tools-ms".into())]
     picturas_microservice_name: String,
@@ -62,7 +62,7 @@ async fn main() {
         .await
         .expect("Failed to connect to RabbitMQ");
 
-    info!("Connected to RabbitMQ at {:?}", conn);
+    info!("Connected to RabbitMQ at {:?}", amqp_uri);
 
     let concurrent_requests = config.picturas_concurrent_requests;
     let channel = message_queue::create_channel(concurrent_requests, &conn).await;

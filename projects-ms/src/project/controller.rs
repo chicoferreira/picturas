@@ -3,10 +3,9 @@ use crate::project::model::Project;
 use crate::user::User;
 use crate::AppState;
 use chrono::Utc;
+use tracing::info;
 use uuid::Uuid;
-use tracing::{info, instrument};
 
-#[instrument]
 pub async fn create_project(owner: User, name: String, state: AppState) -> Result<Project> {
     info!("Creating project with name: {}", name);
     let now = Utc::now();
@@ -33,7 +32,6 @@ pub async fn create_project(owner: User, name: String, state: AppState) -> Resul
     Ok(project)
 }
 
-#[instrument]
 pub async fn get_project(project_id: Uuid, state: AppState) -> Result<Project> {
     info!("Fetching project with ID: {}", project_id);
     let project = sqlx::query_as!(
@@ -49,7 +47,6 @@ pub async fn get_project(project_id: Uuid, state: AppState) -> Result<Project> {
     Ok(project)
 }
 
-#[instrument]
 pub async fn delete_project(project_id: Uuid, state: AppState) -> Result<()> {
     info!("Deleting project with ID: {}", project_id);
     let _ = sqlx::query!("DELETE FROM projects WHERE id = $1", project_id)
