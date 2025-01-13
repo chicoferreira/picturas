@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 const defaultValues = 'item-1'
 const accordionItems = [
   { value: 'item-1', title: 'What is this build', content: 'Content 1' },

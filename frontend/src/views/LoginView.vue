@@ -3,7 +3,9 @@
     <div class="w-full max-w-md space-y-8">
       <!-- Logo -->
       <div class="text-center">
-        <h1 class="text-5xl font-bold bg-gradient-to-r from-[#6D28D9] to-white bg-clip-text text-transparent tracking-tight">
+        <h1
+          class="text-5xl font-bold bg-gradient-to-r from-[#6D28D9] to-white bg-clip-text text-transparent tracking-tight"
+        >
           PICTURAS
         </h1>
       </div>
@@ -79,7 +81,7 @@ interface FormErrors {
 
 const form = reactive<FormData>({
   email: '',
-  password: ''
+  password: '',
 })
 
 const errors = reactive<FormErrors>({})
@@ -114,7 +116,7 @@ const handleSubmit = async () => {
 
   try {
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await new Promise((resolve) => setTimeout(resolve, 1000))
     console.log('Form submitted:', form)
     // Reset form after successful submission
     form.email = ''
