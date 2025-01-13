@@ -8,7 +8,7 @@ use std::path::PathBuf;
 #[serde(rename_all = "camelCase")]
 pub struct RequestMessage {
     pub message_id: String,
-    pub timestamp: DateTime<Utc>,
+    // pub timestamp: DateTime<Utc>,
     #[serde(flatten)]
     pub params: ToolParts,
 }
@@ -141,7 +141,7 @@ mod tests {
     use crate::message::{ErrorDetails, OutputType, RequestMessage, ResponseMessageStatus};
     use std::path::PathBuf;
     use std::str::FromStr;
-    use chrono::{DateTime, Utc};
+    // use chrono::{DateTime, Utc};
 
     #[test]
     fn test_deserialize_request_message() {
@@ -159,7 +159,7 @@ mod tests {
         let input: RequestMessage = serde_json::from_str(input).expect("Failed to parse input");
 
         assert_eq!(input.message_id, "request-2");
-        assert_eq!(input.timestamp, "2024-11-01T12:00:00Z".parse::<DateTime<Utc>>().unwrap());
+        // assert_eq!(input.timestamp, "2024-11-01T12:00:00Z".parse::<DateTime<Utc>>().unwrap());
         assert_eq!(
             input.params.image_uris.input_image_uri,
             PathBuf::from_str("images/request-1-out.jpg").unwrap()

@@ -22,3 +22,13 @@ CREATE TABLE IF NOT EXISTS tools
     procedure  VARCHAR(255) NOT NULL,
     parameters JSONB        NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS image_versions
+(
+    id                UUID PRIMARY KEY,
+    project_id        UUID                                  NOT NULL REFERENCES projects (id),
+    original_image_id UUID                                  NOT NULL REFERENCES images (id),
+    tool_id           UUID                                  NOT NULL REFERENCES tools (id),
+    text_result       TEXT, -- OCR results, if the tool is OCR, or any textual output
+    created_at        TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+);

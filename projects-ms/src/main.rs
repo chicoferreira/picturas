@@ -1,44 +1,33 @@
+mod config;
 mod error;
 mod image;
-mod model;
 mod project;
 mod router;
+mod tool;
 mod user;
 
-use axum::extract::Path;
-use axum::http::StatusCode;
+use crate::config::Config;
+use crate::tool::amqp::rabbit_controller::RabbitMqController;
+use crate::tool::queue::QueuedImageApplyTool;
 use clap::Parser;
+use dashmap::DashMap;
 use sqlx::postgres::PgConnectOptions;
 use sqlx::PgPool;
-use std::path::PathBuf;
 use std::sync::Arc;
+use tower_http::trace::TraceLayer;
 use uuid::Uuid;
 
 #[derive(Clone)]
 struct AppState {
     db_pool: PgPool,
     config: Arc<Config>,
-}
-
-#[derive(Debug, Parser)]
-struct Config {
-    #[arg(long, env)]
-    pg_host: String,
-    #[arg(long, env, default_value_t = 5432)]
-    pg_port: u16,
-    #[arg(long, env)]
-    pg_user: String,
-    #[arg(long, env)]
-    pg_password: String,
-    #[arg(long, env)]
-    picturas_bind_address: String,
-    #[arg(long, env)]
-    picturas_image_folder: PathBuf,
+    rabbit_mq_controller: Arc<RabbitMqController>,
+    queued_tools: Arc<DashMap<Uuid, (Uuid, QueuedImageApplyTool)>>, // queue_uuid, (current_tool_uuid, tool)
 }
 
 #[tokio::main]
 async fn main() {
-    env_logger::init();
+    tracing_subscriber::fmt::init();
 
     let config = Config::parse();
 
@@ -56,26 +45,35 @@ async fn main() {
     let bind_address = &config.picturas_bind_address;
     let listener = tokio::net::TcpListener::bind(bind_address).await.unwrap();
 
+    let rabbit_mq_controller = RabbitMqController::new(8, &config).await;
+
     let state = AppState {
         db_pool: pg_pool,
         config: Arc::new(config),
+        rabbit_mq_controller: Arc::new(rabbit_mq_controller),
+        queued_tools: Default::default(),
     };
 
-    axum::serve(listener, router::router(state)).await.unwrap();
+    let rabbit_mq_consumer = state.rabbit_mq_controller.create_consumer(&state).await;
+
+    tokio::select! {
+        _ = tool::queue::run_rabbit_mq_results_read_loop(rabbit_mq_consumer, state.clone()) => {}
+        _ = axum::serve(listener, router::router(state).layer(TraceLayer::new_for_http())) => {}
+    }
 }
 
-async fn change_project(Path(project_id): Path<Uuid>) -> StatusCode {
-    StatusCode::OK
-}
-
-async fn apply_tool(Path(project_id): Path<Uuid>) -> StatusCode {
-    StatusCode::CREATED
-}
-
-async fn get_tools(Path(project_id): Path<Uuid>) -> StatusCode {
-    StatusCode::OK
-}
-
-async fn delete_tool(Path(project_id): Path<Uuid>, Path(tool_id): Path<Uuid>) -> StatusCode {
-    StatusCode::NO_CONTENT
-}
+// async fn change_project(Path(project_id): Path<Uuid>) -> StatusCode {
+//     StatusCode::OK
+// }
+//
+// async fn apply_tool(Path(project_id): Path<Uuid>) -> StatusCode {
+//     StatusCode::CREATED
+// }
+//
+// async fn get_tools(Path(project_id): Path<Uuid>) -> StatusCode {
+//     StatusCode::OK
+// }
+//
+// async fn delete_tool(Path(project_id): Path<Uuid>, Path(tool_id): Path<Uuid>) -> StatusCode {
+//     StatusCode::NO_CONTENT
+// }

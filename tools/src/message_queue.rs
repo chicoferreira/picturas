@@ -11,9 +11,9 @@ use lapin::options::{BasicAckOptions, BasicConsumeOptions, BasicPublishOptions, 
 use lapin::publisher_confirm::PublisherConfirm;
 use lapin::types::{FieldTable, ShortUInt};
 use lapin::{BasicProperties, Channel, Connection, Consumer};
-use log::{error, info};
 use std::sync::Arc;
 use std::time::Instant;
+use tracing::{debug, error, info};
 use uuid::Uuid;
 
 impl From<Result<HandleRequestResult, HandleRequestError>> for ResponseMessageStatus {
@@ -30,6 +30,9 @@ impl From<Result<HandleRequestResult, HandleRequestError>> for ResponseMessageSt
             Err(request_error) => {
                 let code = match request_error {
                     HandleRequestError::ImageSaveError { .. } => "IMAGE_SAVE_ERROR",
+                    HandleRequestError::ImageSaveCreateFoldersError { .. } => {
+                        "IMAGE_SAVE_CREATE_FOLDERS_ERROR"
+                    }
                     HandleRequestError::ImageOpenError { .. } => "IMAGE_OPEN_ERROR",
                     HandleRequestError::ToolApplyError { .. } => "TOOL_APPLY_ERROR",
                     HandleRequestError::MissingOutputPath => "MISSING_OUTPUT_PATH",
@@ -68,7 +71,13 @@ async fn handle_rabbitmq_delivery(delivery: Delivery, state: &State) -> anyhow::
     info!("Received request: {request:?}");
     let message_id = request.message_id.clone();
 
-    let result = tokio::spawn(handle::handle_request(request)).await.unwrap();
+    let result = tokio::spawn(handle::handle_request(request)).await?;
+
+    match &result {
+        Ok(result) => debug!(result = ?result, "Request handled successfully"),
+        Err(error) => error!(error = %error, "Request failed"),
+    }
+
     let response = ResponseMessage {
         message_id: Uuid::new_v4().to_string(),
         correlation_id: message_id,
@@ -85,8 +94,10 @@ async fn handle_rabbitmq_delivery(delivery: Delivery, state: &State) -> anyhow::
         response.message_id, response.metadata.processing_time
     );
 
+    debug!(response = ?response, "Sending response");
+
     let response = serde_json::to_vec(&response).context("Failed to serialize response")?;
-    publish_response(&response, &state)
+    publish_response(&response, state)
         .await
         .context("Failed to publish response")?;
 

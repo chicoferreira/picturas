@@ -3,12 +3,45 @@ services:
     image: postgres:14.1-alpine
     restart: always
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=picturas
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: picturas
     ports:
       - '5432:5432'
     volumes:
       - db:/var/lib/postgresql/data
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "15672:15672" # Optional. Makes RabbitMQ dashboard available on host: active for debug / management purposes
+      - "5672:5672" # TODO: Remove this line in production
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq/
+      - rabbitmq-logs:/var/log/rabbitmq/
+    healthcheck:
+      test: rabbitmq-diagnostics check_port_connectivity
+      interval: 5s
+      timeout: 30s
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      PG_HOST: ${PG_HOST}
+      PG_USER: ${PG_USER}
+      PG_PASSWORD: ${PG_PASSWORD}
+      PG_PORT: ${PG_PORT}
+      PICTURAS_BIND_ADDRESS: ${PICTURAS_BIND_ADDRESS}
+      PICTURAS_IMAGE_FOLDER: ${PICTURAS_IMAGE_FOLDER}
+    ports:
+      - '8000:8000'
+    depends_on:
+      - db
+
 volumes:
   db:
+  rabbitmq-data:
+  rabbitmq-logs:

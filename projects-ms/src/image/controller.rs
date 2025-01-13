@@ -1,9 +1,10 @@
-use crate::error::{AppError, Result};
+use crate::error::Result;
 use crate::image::model::Image;
 use crate::AppState;
 use axum::body::Bytes;
 use tokio::fs::File;
 use tokio::io::{AsyncWriteExt, BufWriter};
+use tracing::info;
 use uuid::Uuid;
 
 pub async fn create_image(
@@ -12,6 +13,7 @@ pub async fn create_image(
     image_bytes: Bytes,
     state: &AppState,
 ) -> Result<Image> {
+    info!("Creating image with name: {}", image_name);
     let uuid = Uuid::new_v4();
 
     let image = Image {
@@ -35,10 +37,16 @@ pub async fn create_image(
     .execute(&state.db_pool)
     .await?;
 
+    info!(
+        id = ?image.id,
+        path = ?path,
+        "Image created"
+    );
     Ok(image)
 }
 
-pub async fn get_images(project_uuid: Uuid, state: &AppState) -> Result<Vec<Image>> {
+pub async fn get_original_images(project_uuid: Uuid, state: &AppState) -> Result<Vec<Image>> {
+    info!("Fetching original images for project ID: {}", project_uuid);
     let images = sqlx::query_as!(
         Image,
         "SELECT id, name, project_id FROM images WHERE project_id = $1",
@@ -47,6 +55,7 @@ pub async fn get_images(project_uuid: Uuid, state: &AppState) -> Result<Vec<Imag
     .fetch_all(&state.db_pool)
     .await?;
 
+    info!("Fetched {} images", images.len());
     Ok(images)
 }
 
@@ -55,6 +64,7 @@ pub async fn delete_image(
     project_uuid: Uuid,
     state: &AppState,
 ) -> Result<Option<Image>> {
+    info!("Deleting image with ID: {}", image_uuid);
     let image = sqlx::query_as!(
         Image,
         "SELECT id, name, project_id FROM images WHERE id = $1 AND project_id = $2",
@@ -74,6 +84,10 @@ pub async fn delete_image(
 
     tokio::fs::remove_file(image.get_uri(state)).await?;
 
+    info!(
+        id = ?image.id,
+        "Deleted image"
+    );
     Ok(Some(image))
 }
 
@@ -82,6 +96,7 @@ pub async fn get_image(
     image_id: Uuid,
     state: &AppState,
 ) -> Result<(String, Vec<u8>)> {
+    info!("Fetching image with ID: {}", image_id);
     let image = sqlx::query_as!(
         Image,
         "SELECT id, name, project_id FROM images WHERE id = $1 AND project_id = $2",
@@ -94,5 +109,10 @@ pub async fn get_image(
     let path = image.get_uri(state);
     let file = tokio::fs::read(&path).await?;
 
+    info!(
+        id = ?image.id,
+        path = ?path,
+        "Fetched image"
+    );
     Ok((image.name, file))
 }
