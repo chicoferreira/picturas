@@ -2,7 +2,8 @@ use crate::error::Result;
 use crate::tool::model::{ImageVersion, RequestedTool, Tool};
 use crate::tool::queue;
 use crate::tool::queue::QueuedImageApplyTool;
-use crate::{config, image, AppState};
+use crate::{config, image, tool, AppState};
+use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use tracing::{debug, info};
 use uuid::Uuid;
@@ -139,7 +140,11 @@ pub async fn update_tools(
     Ok(result)
 }
 
-pub async fn apply_added_tools(project_uuid: Uuid, state: &AppState) -> Result<()> {
+pub async fn apply_added_tools(
+    project_uuid: Uuid,
+    user_uuid: Uuid,
+    state: &AppState,
+) -> Result<()> {
     delete_image_versions(project_uuid, state).await?;
 
     let (images, tools) = tokio::join!(
@@ -157,6 +162,7 @@ pub async fn apply_added_tools(project_uuid: Uuid, state: &AppState) -> Result<(
 
         let queued_image_apply_tool = QueuedImageApplyTool::new_generate_output_uri(
             project_uuid,
+            user_uuid,
             image.id,
             image_input_uri,
             requested_tools.clone(),
@@ -168,6 +174,23 @@ pub async fn apply_added_tools(project_uuid: Uuid, state: &AppState) -> Result<(
     }
 
     Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ImageVersionWithUrl {
+    #[serde(flatten)]
+    image_version: ImageVersion,
+    url: String,
+}
+
+impl ImageVersionWithUrl {
+    pub fn from_image_version(image_version: ImageVersion, state: &AppState) -> Self {
+        let url = format!(
+            "{}/api/v1/projects/{}/tools/images/{}",
+            state.config.picturas_public_url, image_version.project_id, image_version.id
+        );
+        Self { url, image_version }
+    }
 }
 
 pub async fn save_image_version(image_version: &ImageVersion, state: &AppState) -> Result<()> {

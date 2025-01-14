@@ -1,10 +1,12 @@
 use crate::tool::amqp::message::OutputType::Text;
 use crate::tool::amqp::message::ResponseStatus;
 use crate::tool::amqp::rabbit_controller::{RabbitMqConsumer, RabbitMqControllerError};
+use crate::tool::controller::ImageVersionWithUrl;
 use crate::tool::model::{ImageVersion, RequestedTool};
-use crate::tool::{amqp, controller};
+use crate::tool::{amqp, controller, websocket};
 use crate::{config, AppState};
 use chrono::Utc;
+use serde::Serialize;
 use serde_json::json;
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
@@ -16,6 +18,7 @@ pub struct QueuedImageApplyTool {
     pub new_image_uuid: Uuid,
     pub original_image_uuid: Uuid,
     pub project_id: Uuid,
+    pub user_id: Uuid,
     pub image_input_uri: PathBuf,
     pub image_output_uri: PathBuf,
     pub missing_tools: VecDeque<(Uuid, RequestedTool)>, // tool_uuid, tool
@@ -24,6 +27,7 @@ pub struct QueuedImageApplyTool {
 impl QueuedImageApplyTool {
     pub fn new_generate_output_uri(
         project_id: Uuid,
+        user_id: Uuid,
         original_image_uuid: Uuid,
         image_input_uri: PathBuf,
         missing_tools: VecDeque<(Uuid, RequestedTool)>,
@@ -45,6 +49,7 @@ impl QueuedImageApplyTool {
             missing_tools,
             original_image_uuid,
             project_id,
+            user_id,
         }
     }
 }
@@ -133,10 +138,24 @@ pub async fn run_rabbit_mq_results_read_loop(mut consumer: RabbitMqConsumer, sta
                     error!("Failed to save image version to the database: {}", e);
                 }
 
+                let notification = ImageVersionWithUrl::from_image_version(image_version, &state);
+
+                if let Err(err) = websocket::send_ws_message(
+                    &state,
+                    queued_tool.project_id,
+                    queued_tool.user_id,
+                    notification,
+                )
+                .await
+                {
+                    error!("Failed to send message to websocket: {}", err);
+                }
+
                 // if there are more tools to apply, add the tool to the queue
                 if !queued_tool.missing_tools.is_empty() {
                     let queued_tool = QueuedImageApplyTool::new_generate_output_uri(
                         queued_tool.project_id,
+                        queued_tool.user_id,
                         queued_tool.original_image_uuid,
                         queued_tool.image_output_uri, // now the new input will be the output of the previous tool
                         queued_tool.missing_tools,
@@ -149,7 +168,20 @@ pub async fn run_rabbit_mq_results_read_loop(mut consumer: RabbitMqConsumer, sta
                 }
             }
             ResponseStatus::Error { error } => {
-                error!(message = ?message.message_id, ?error, "Received a error response");
+                info!(message = ?message.message_id, ?error, "Received a error response");
+
+                if let Err(err) = websocket::send_ws_message(
+                    &state,
+                    queued_tool.project_id,
+                    queued_tool.user_id,
+                    json!({
+                        "error": error,
+                    }),
+                )
+                .await
+                {
+                    error!("Failed to send message to websocket: {}", err);
+                }
                 continue; // we can't apply the next tool if the current one failed
             }
         }

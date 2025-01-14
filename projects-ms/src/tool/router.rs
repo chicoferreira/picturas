@@ -1,11 +1,14 @@
 use crate::error::Result;
+use crate::tool::controller::ImageVersionWithUrl;
 use crate::tool::model::{RequestedTool, Tool};
+use crate::tool::websocket;
+use crate::user::User;
 use crate::{tool, AppState};
 use axum::extract::{Path, State};
 use axum::http::{header, HeaderName, HeaderValue};
 use axum::routing::{get, post};
 use axum::{debug_handler, Json, Router};
-use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 use uuid::Uuid;
 
 pub fn router(state: AppState) -> Router {
@@ -23,7 +26,8 @@ pub fn router(state: AppState) -> Router {
             "/projects/{project_id}/tools/images/{image_version_id}",
             get(download_image_version),
         )
-        .with_state(state)
+        .with_state(state.clone())
+        .merge(websocket::router(state))
 }
 
 #[debug_handler]
@@ -61,18 +65,13 @@ async fn put_tools(
 #[debug_handler]
 async fn apply_tools(
     Path(project_id): Path<Uuid>,
+    user: User,
     State(state): State<AppState>,
-) -> Result<Json<()>> {
-    tool::controller::apply_added_tools(project_id, &state).await?;
-    // TODO: return a uuid so the client can check the status of the request, also develop that feature with websockets
-    Ok(Json(()))
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ImageVersionWithUrl {
-    #[serde(flatten)]
-    image_version: tool::model::ImageVersion,
-    url: String,
+) -> Result<Json<Value>> {
+    tool::controller::apply_added_tools(project_id, user.uuid, &state).await?;
+    Ok(Json(json!({
+        "message": "Hook to websocket to get realtime results",
+    })))
 }
 
 #[debug_handler]
@@ -83,13 +82,7 @@ async fn get_image_versions(
     let images = tool::controller::get_image_versions(project_id, &state)
         .await?
         .into_iter()
-        .map(|image_version| ImageVersionWithUrl {
-            url: format!(
-                "{}/api/v1/projects/{}/tools/images/{}",
-                state.config.picturas_public_url, project_id, image_version.id
-            ),
-            image_version,
-        })
+        .map(|image_version| ImageVersionWithUrl::from_image_version(image_version, &state))
         .collect();
 
     Ok(Json(images))

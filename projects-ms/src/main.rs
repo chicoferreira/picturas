@@ -3,27 +3,18 @@ mod error;
 mod image;
 mod project;
 mod router;
+mod state;
 mod tool;
 mod user;
 
 use crate::config::Config;
+use crate::state::AppState;
 use crate::tool::amqp::rabbit_controller::RabbitMqController;
-use crate::tool::queue::QueuedImageApplyTool;
 use clap::Parser;
-use dashmap::DashMap;
 use sqlx::postgres::PgConnectOptions;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
-use uuid::Uuid;
-
-#[derive(Clone)]
-struct AppState {
-    db_pool: PgPool,
-    config: Arc<Config>,
-    rabbit_mq_controller: Arc<RabbitMqController>,
-    queued_tools: Arc<DashMap<Uuid, (Uuid, QueuedImageApplyTool)>>, // queue_uuid, (current_tool_uuid, tool)
-}
 
 #[tokio::main]
 async fn main() {
@@ -52,6 +43,7 @@ async fn main() {
         config: Arc::new(config),
         rabbit_mq_controller: Arc::new(rabbit_mq_controller),
         queued_tools: Default::default(),
+        connected_ws_clients: Default::default(),
     };
 
     let rabbit_mq_consumer = state.rabbit_mq_controller.create_consumer(&state).await;

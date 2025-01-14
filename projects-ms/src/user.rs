@@ -4,6 +4,7 @@ use axum::http::request::Parts;
 use uuid::Uuid;
 
 // This user will be extracted from the request headers.
+#[derive(Debug)]
 pub struct User {
     pub uuid: Uuid,
     pub name: String,
