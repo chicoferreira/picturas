@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 
 url_obj = URL.create(
     drivername='postgresql',
@@ -13,12 +14,7 @@ url_obj = URL.create(
 
 engine = create_engine(url_obj)
 Session = sessionmaker(bind=engine)
-
-class Base:
-    __name__: str
-    
-    def __tablename__(cls):
-        return cls.__name__.lower()
+Base = declarative_base()
 
 def get_db():
     db = Session()
