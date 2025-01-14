@@ -2,7 +2,6 @@ use crate::error::{AppError, Result};
 use crate::image::controller;
 use crate::image::model::Image;
 use crate::AppState;
-use anyhow::anyhow;
 use axum::extract::{DefaultBodyLimit, Multipart, Path, State};
 use axum::http::{header, HeaderName, HeaderValue};
 use axum::routing::{get, post};
@@ -41,7 +40,7 @@ async fn create_image(
             .to_string();
 
         if !content_type.starts_with("image/") {
-            return Err(anyhow!("Content-Type is not an image").into());
+            return Err(AppError::NotAnImage(content_type));
         }
 
         let data = field.bytes().await?;
