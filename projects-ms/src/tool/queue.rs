@@ -3,7 +3,7 @@ use crate::tool::amqp::message::ResponseStatus;
 use crate::tool::amqp::rabbit_controller::{RabbitMqConsumer, RabbitMqControllerError};
 use crate::tool::model::{ImageVersion, RequestedTool};
 use crate::tool::{amqp, controller};
-use crate::AppState;
+use crate::{config, AppState};
 use chrono::Utc;
 use serde_json::json;
 use std::collections::VecDeque;
@@ -31,7 +31,7 @@ impl QueuedImageApplyTool {
     ) -> Self {
         let new_image_uuid = Uuid::new_v4();
 
-        let image_output_uri = ImageVersion::generate_output_uri(
+        let image_output_uri = config::generate_image_version_output_uri(
             project_id,
             original_image_uuid,
             new_image_uuid,

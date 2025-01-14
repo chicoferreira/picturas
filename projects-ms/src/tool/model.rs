@@ -1,4 +1,4 @@
-use crate::AppState;
+use crate::{config, AppState};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::types::JsonValue;
@@ -40,23 +40,12 @@ pub struct ImageVersion {
 
 impl ImageVersion {
     pub fn get_uri(&self, state: &AppState) -> PathBuf {
-        Self::generate_output_uri(self.project_id, self.original_image_id, self.id, state)
-    }
-
-    pub fn generate_output_uri(
-        project_uuid: Uuid,
-        original_image_uuid: Uuid,
-        new_image_uuid: Uuid,
-        state: &AppState,
-    ) -> PathBuf {
-        state
-            .config
-            .picturas_image_folder
-            .join(project_uuid.to_string())
-            .join("output")
-            .join(original_image_uuid.to_string())
-            .join(new_image_uuid.to_string())
-            .with_extension("png")
+        config::generate_image_version_output_uri(
+            self.project_id,
+            self.original_image_id,
+            self.id,
+            state,
+        )
     }
 }
 

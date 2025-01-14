@@ -61,19 +61,3 @@ async fn main() {
         _ = axum::serve(listener, router::router(state).layer(TraceLayer::new_for_http())) => {}
     }
 }
-
-// async fn change_project(Path(project_id): Path<Uuid>) -> StatusCode {
-//     StatusCode::OK
-// }
-//
-// async fn apply_tool(Path(project_id): Path<Uuid>) -> StatusCode {
-//     StatusCode::CREATED
-// }
-//
-// async fn get_tools(Path(project_id): Path<Uuid>) -> StatusCode {
-//     StatusCode::OK
-// }
-//
-// async fn delete_tool(Path(project_id): Path<Uuid>, Path(tool_id): Path<Uuid>) -> StatusCode {
-//     StatusCode::NO_CONTENT
-// }

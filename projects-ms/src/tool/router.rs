@@ -12,7 +12,7 @@ pub fn router(state: AppState) -> Router {
     Router::new()
         .route(
             "/projects/{project_id}/tools",
-            get(get_tools).post(add_tool),
+            get(get_tools).post(add_tool).put(put_tools),
         )
         .route("/projects/{project_id}/tools/apply", post(apply_tools))
         .route(
@@ -31,8 +31,9 @@ async fn get_tools(
     Path(project_id): Path<Uuid>,
     State(state): State<AppState>,
 ) -> Result<Json<Vec<Tool>>> {
-    let tools = tool::controller::get_applied_tools(project_id, &state).await?;
-    Ok(Json(tools))
+    tool::controller::get_applied_tools(project_id, &state)
+        .await
+        .map(Json)
 }
 
 #[debug_handler]
@@ -41,8 +42,20 @@ async fn add_tool(
     State(state): State<AppState>,
     Json(tool): Json<RequestedTool>,
 ) -> Result<Json<Tool>> {
-    let tool = tool::controller::add_tool(project_id, tool, &state).await?;
-    Ok(Json(tool))
+    tool::controller::add_tool(project_id, tool, &state)
+        .await
+        .map(Json)
+}
+
+#[debug_handler]
+async fn put_tools(
+    Path(project_id): Path<Uuid>,
+    State(state): State<AppState>,
+    Json(tools): Json<Vec<RequestedTool>>,
+) -> Result<Json<Vec<Tool>>> {
+    tool::controller::update_tools(project_id, tools, &state)
+        .await
+        .map(Json)
 }
 
 #[debug_handler]
@@ -94,5 +107,3 @@ async fn download_image_version(
         image_bytes,
     ))
 }
-
-// TODO: delete tool endpoint which will delete the tool and all the image versions associated with it and update the position of other tools

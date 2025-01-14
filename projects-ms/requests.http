@@ -68,6 +68,25 @@ Content-Type: application/json
 ### Apply the added tools to all the images in a project
 POST http://localhost:8000/api/v1/projects/{{project}}/tools/apply
 
+### Sets a tools list to the project
+PUT http://localhost:8000/api/v1/projects/{{project}}/tools
+Content-Type: application/json
+
+[
+  {
+    "procedure": "blur",
+    "parameters": {
+      "radius": 10
+    }
+  },
+  {
+    "procedure": "rotate",
+    "parameters": {
+      "angle": 90
+    }
+  }
+]
+
 ### Get all image versions from a project
 GET http://localhost:8000/api/v1/projects/{{project}}/tools/images
 

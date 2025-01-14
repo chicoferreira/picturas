@@ -2,7 +2,7 @@ use crate::error::Result;
 use crate::tool::model::{ImageVersion, RequestedTool, Tool};
 use crate::tool::queue;
 use crate::tool::queue::QueuedImageApplyTool;
-use crate::{image, AppState};
+use crate::{config, image, AppState};
 use std::collections::VecDeque;
 use tracing::{debug, info};
 use uuid::Uuid;
@@ -59,8 +59,6 @@ pub async fn add_tool(
         Some(last_applied_tool) => last_applied_tool.position,
     };
 
-    debug!(last_position, "Last position");
-
     let tool = Tool {
         id: Uuid::new_v4(),
         project_id: project_uuid,
@@ -83,8 +81,66 @@ pub async fn add_tool(
     Ok(tool)
 }
 
+async fn delete_image_versions(project_uuid: Uuid, state: &AppState) -> Result<()> {
+    let delete_files = tokio::fs::remove_dir_all(config::generate_image_version_folder_uri(
+        project_uuid,
+        state,
+    ));
+
+    let delete_sql = sqlx::query!(
+        "DELETE FROM image_versions WHERE project_id = $1",
+        project_uuid
+    )
+    .execute(&state.db_pool);
+
+    let (_delete_files, delete_sql) = tokio::join!(delete_files, delete_sql);
+
+    delete_sql?;
+
+    Ok(())
+}
+
+pub async fn update_tools(
+    project_uuid: Uuid,
+    tools: Vec<RequestedTool>,
+    state: &AppState,
+) -> Result<Vec<Tool>> {
+    delete_image_versions(project_uuid, state).await?;
+
+    sqlx::query!("DELETE FROM tools WHERE project_id = $1", project_uuid)
+        .execute(&state.db_pool)
+        .await?;
+
+    let mut result = vec![];
+
+    for (position, requested_tool) in tools.into_iter().enumerate() {
+        let tool = Tool {
+            id: Uuid::new_v4(),
+            project_id: project_uuid,
+            position: position as i32 + 1,
+            procedure: requested_tool.procedure.clone(),
+            parameters: serde_json::to_value(requested_tool.parameters.clone()).unwrap(),
+        };
+
+        sqlx::query!(
+            "INSERT INTO tools (id, project_id, position, procedure, parameters) VALUES ($1, $2, $3, $4, $5)",
+            tool.id,
+            tool.project_id,
+            tool.position,
+            tool.procedure,
+            tool.parameters
+        )
+            .execute(&state.db_pool)
+            .await?;
+
+        result.push(tool);
+    }
+
+    Ok(result)
+}
+
 pub async fn apply_added_tools(project_uuid: Uuid, state: &AppState) -> Result<()> {
-    // TODO: delete older image versions
+    delete_image_versions(project_uuid, state).await?;
 
     let (images, tools) = tokio::join!(
         image::controller::get_original_images(project_uuid, state),

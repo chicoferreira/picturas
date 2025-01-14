@@ -1,6 +1,8 @@
 use crate::tool::amqp::rabbit_controller::ToolQueue;
+use crate::AppState;
 use clap::Parser;
 use std::path::PathBuf;
+use uuid::Uuid;
 
 #[derive(Debug, Parser)]
 pub struct Config {
@@ -40,4 +42,40 @@ fn parse_tool_queue(src: &str) -> Result<ToolQueue, String> {
         name: name.to_string(),
         routing_key: routing_key.to_string(),
     })
+}
+
+pub fn generate_image_version_folder_uri(project_uuid: Uuid, state: &AppState) -> PathBuf {
+    state
+        .config
+        .picturas_image_folder
+        .join(project_uuid.to_string())
+        .join("output")
+}
+
+pub fn generate_image_version_output_uri(
+    project_uuid: Uuid,
+    original_image_uuid: Uuid,
+    new_image_uuid: Uuid,
+    state: &AppState,
+) -> PathBuf {
+    generate_image_version_folder_uri(project_uuid, state)
+        .join(original_image_uuid.to_string())
+        .join(new_image_uuid.to_string())
+        .with_extension("png")
+}
+
+pub fn generate_image_uri(
+    project_uuid: Uuid,
+    image_uuid: Uuid,
+    image_name: &str,
+    state: &AppState,
+) -> PathBuf {
+    let buf = PathBuf::from(image_name);
+    let extension_from_name = buf.extension().unwrap_or_default();
+    state
+        .config
+        .picturas_image_folder
+        .join(project_uuid.to_string())
+        .join(image_uuid.to_string())
+        .with_extension(extension_from_name)
 }
