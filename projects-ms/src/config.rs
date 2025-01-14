@@ -28,6 +28,8 @@ pub struct Config {
     pub picturas_bind_address: String,
     #[arg(long, env)]
     pub picturas_image_folder: PathBuf,
+    #[arg(long, env)]
+    pub picturas_public_url: String,
     #[arg(long, env, use_value_delimiter = true, value_parser = parse_tool_queue)]
     pub picturas_available_tools: Vec<ToolQueue>,
 }

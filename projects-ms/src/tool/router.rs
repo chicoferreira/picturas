@@ -5,6 +5,7 @@ use axum::extract::{Path, State};
 use axum::http::{header, HeaderName, HeaderValue};
 use axum::routing::{get, post};
 use axum::{debug_handler, Json, Router};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 pub fn router(state: AppState) -> Router {
@@ -54,12 +55,30 @@ async fn apply_tools(
     Ok(Json(()))
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct ImageVersionWithUrl {
+    #[serde(flatten)]
+    image_version: tool::model::ImageVersion,
+    url: String,
+}
+
+#[debug_handler]
 async fn get_image_versions(
     Path(project_id): Path<Uuid>,
     State(state): State<AppState>,
-) -> Result<Json<Vec<tool::model::ImageVersion>>> {
-    // TODO: add the url link to each image
-    let images = tool::controller::get_image_versions(project_id, &state).await?;
+) -> Result<Json<Vec<ImageVersionWithUrl>>> {
+    let images = tool::controller::get_image_versions(project_id, &state)
+        .await?
+        .into_iter()
+        .map(|image_version| ImageVersionWithUrl {
+            url: format!(
+                "{}/api/v1/projects/{}/tools/images/{}",
+                state.config.picturas_public_url, project_id, image_version.id
+            ),
+            image_version,
+        })
+        .collect();
+
     Ok(Json(images))
 }
 
