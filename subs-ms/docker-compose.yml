@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: subscriptions
     ports:
-      - '5433:5433'
+      - '5433:5432'
     volumes:
       - db:/var/lib/postgresql/data
   app:
@@ -21,9 +21,11 @@ services:
       PG_PASSWORD: ${PG_PASSWORD}
       PG_PORT: ${PG_PORT}
     ports:
-      - '8080:8080'
+      - '8080:8000'
     depends_on:
       - db
+    env_file:
+      - .env
 
 volumes:
   db:

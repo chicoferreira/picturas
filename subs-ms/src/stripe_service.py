@@ -1,18 +1,32 @@
 import stripe
 import os
+import httpx
+from datetime import datetime, timedelta
 from uuid import UUID
 
-from models import Subscription
+from .models import Subscription
 from fastapi import APIRouter, Request, Response, Depends
 from fastapi.responses import JSONResponse
-from database import Session, get_db
-from db_interact import new_sub
+from .database import Session, get_db
+from .db_interact import new_sub
 from dotenv import load_dotenv
 
 router = APIRouter()
 
 load_dotenv()
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+USERS_ENDPOINT = os.getenv('USERS_ENDPOINT')
+
+async def notif_users(sub: Subscription):
+    user_id = sub.user_id
+    end_date = sub.end_date
+    data = {
+        'user_id': user_id,
+        'role': 'premium',
+        'expires_on': end_date
+    }
+    async with httpx.AsyncClient() as client:
+        await client.post(USERS_ENDPOINT, json=data)
 
 @router.post('/create-checkout-session')
 async def create_checkout_session(req: Request, db: Session = Depends(get_db)):
@@ -47,7 +61,7 @@ async def create_checkout_session(req: Request, db: Session = Depends(get_db)):
             status = 'inactive'
         )
 
-        new_sub = new_sub(sub, db)
+        new_subscription = new_sub(sub, db)
 
         return JSONResponse(
             status_code=200,
@@ -77,8 +91,11 @@ async def handle_webhook(req: Request, db: Session = Depends(get_db)):
             if sub:
                 sub.status = 'active'
                 db.commit()
+                notif_users(sub)
         
-        return 200
+        return JSONResponse(
+            status_code=200,
+        )
 
     except stripe.error.SignatureVerificationError:
         return JSONResponse(

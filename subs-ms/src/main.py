@@ -1,7 +1,7 @@
 import json
-import stripe_service
+from . import stripe_service 
 from fastapi import FastAPI
-from database import engine, Base
+from .database import engine, Base
 
 app = FastAPI()
 
