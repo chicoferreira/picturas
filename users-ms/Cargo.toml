@@ -1,0 +1,21 @@
+[package]
+name = "users-ms"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+argon2 = "0.5.3"
+axum = { version = "0.8.1", features = ["macros"] }
+chrono = { version = "0.4.39", features = ["serde"] }
+clap = { version = "4.5.26", features = ["derive", "env"] }
+jsonwebtoken = "9.3.0"
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = "1.0.135"
+sqlx = { version = "0.8.3", features = ["chrono", "postgres", "runtime-tokio", "uuid"] }
+thiserror = "2.0.11"
+tokio = { version = "1.43.0", features = ["full"] }
+tower-http = { version = "0.6.2", features = ["trace"] }
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
+uuid = { version = "1.12.0", features = ["serde", "v4"] }
+validator = { version = "0.19.0", features = ["derive"] }
