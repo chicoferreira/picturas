@@ -45,7 +45,7 @@ async def create_checkout_session(req: Request, db: Session = Depends(get_db)):
             payment_method_types=['card'],
             mode='subscription',
             line_items=[{
-                'price': 'price_1Qfi9BIu8PvkBpDWSZ3jvFBf',
+                'price': 'price_1QhdkQIu8PvkBpDWPolasFE4',
                 'quantity': 1,
             }],
             success_url='https://example.com/success',
