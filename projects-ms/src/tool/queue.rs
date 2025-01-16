@@ -6,7 +6,6 @@ use crate::tool::model::{ImageVersion, RequestedTool};
 use crate::tool::{amqp, controller, websocket};
 use crate::{config, AppState};
 use chrono::Utc;
-use serde::Serialize;
 use serde_json::json;
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};

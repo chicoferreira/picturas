@@ -2,7 +2,7 @@ use crate::error::Result;
 use crate::tool::model::{ImageVersion, RequestedTool, Tool};
 use crate::tool::queue;
 use crate::tool::queue::QueuedImageApplyTool;
-use crate::{config, image, tool, AppState};
+use crate::{config, image, AppState};
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use tracing::{debug, info};

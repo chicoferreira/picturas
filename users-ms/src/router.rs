@@ -136,13 +136,13 @@ async fn refresh_access_token(
 ) -> AppResult<impl IntoResponse> {
     let refresh_token = cookie_jar
         .get(REFRESH_TOKEN_COOKIE_NAME)
-        .ok_or(AppError::InvalidRefreshToken)?;
+        .ok_or(AppError::InvalidToken)?;
 
     let token = jwt::decode_refresh_token(&state, refresh_token.value())?;
 
     let user = user::get_user_by_uuid(token.sub, &state)
         .await?
-        .ok_or(AppError::InvalidRefreshToken)?;
+        .ok_or(AppError::InvalidToken)?;
 
     let access_token = jwt::create_access_token(&state, &user)?;
 
@@ -192,7 +192,7 @@ async fn logout_user(
 ) -> AppResult<impl IntoResponse> {
     let refresh_token = cookie_jar
         .get(REFRESH_TOKEN_COOKIE_NAME)
-        .ok_or(AppError::InvalidRefreshToken)?;
+        .ok_or(AppError::InvalidToken)?;
 
     let token = jwt::decode_refresh_token(&state, refresh_token.value())?;
     let user = user::get_user_by_uuid(token.sub, &state)

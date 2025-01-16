@@ -22,8 +22,8 @@ pub enum AppError {
     JwtError(#[from] jsonwebtoken::errors::Error),
     #[error("invalid password")]
     InvalidPassword,
-    #[error("invalid refresh token")]
-    InvalidRefreshToken,
+    #[error("invalid token")]
+    InvalidToken,
     #[error("unauthorized")]
     Unauthorized,
 }
@@ -68,7 +68,7 @@ impl IntoResponse for AppError {
                 "Validation error".to_string(),
                 serde_json::to_value(err).ok(),
             ),
-            AppError::InvalidRefreshToken => (
+            AppError::InvalidToken => (
                 StatusCode::UNAUTHORIZED,
                 "Invalid refresh token".to_string(),
                 None,
