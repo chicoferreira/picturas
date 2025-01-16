@@ -15,6 +15,8 @@ pub struct Config {
     #[arg(long, env)]
     pub pg_password: String,
     #[arg(long, env)]
+    pub pg_database: String,
+    #[arg(long, env)]
     pub rabbitmq_host: String,
     #[arg(long, env, default_value_t = 5672)]
     pub rabbitmq_port: u16,
@@ -27,7 +29,9 @@ pub struct Config {
     #[arg(long, env)]
     pub rabbitmq_results_routing_key: String,
     #[arg(long, env)]
-    pub picturas_bind_address: String,
+    pub bind_ip: String,
+    #[arg(long, env, default_value_t = 8080)]
+    pub bind_port: u16,
     #[arg(long, env)]
     pub picturas_image_folder: PathBuf,
     #[arg(long, env)]

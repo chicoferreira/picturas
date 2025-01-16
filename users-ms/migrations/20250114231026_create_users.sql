@@ -7,4 +7,4 @@ CREATE TABLE IF NOT EXISTS users
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-CREATE INDEX ON users (email);
+CREATE INDEX IF NOT EXISTS users_email_idx ON users (email);

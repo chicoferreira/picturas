@@ -1,0 +1,47 @@
+services:
+  db-users-ms:
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DATABASE}
+    volumes:
+      - db-users-ms:/var/lib/postgresql/data
+  users-ms:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PG_HOST=db-users-ms
+      - PG_PORT=5432
+      - PG_USER
+      - PG_PASSWORD
+      - PG_DATABASE
+      - BIND_IP
+      - BIND_PORT
+      - REFRESH_TOKEN_MAX_AGE
+      - ACCESS_TOKEN_MAX_AGE
+      - ACCESS_TOKEN_PUBLIC_KEY=/run/secrets/access_token_public_key
+      - ACCESS_TOKEN_PRIVATE_KEY=/run/secrets/access_token_private_key
+      - REFRESH_TOKEN_PUBLIC_KEY=/run/secrets/refresh_token_public_key
+      - REFRESH_TOKEN_PRIVATE_KEY=/run/secrets/refresh_token_private_key
+    secrets:
+      - refresh_token_private_key
+      - refresh_token_public_key
+      - access_token_private_key
+      - access_token_public_key
+    ports:
+      - ${BIND_PORT}:${BIND_PORT}
+volumes:
+  db-users-ms:
+
+secrets:
+  refresh_token_private_key:
+    file: ./keys/refresh.key
+  refresh_token_public_key:
+    file: ./keys/refresh.key.pub
+  access_token_private_key:
+    file: ./keys/access.key
+  access_token_public_key:
+    file: ./keys/access.key.pub

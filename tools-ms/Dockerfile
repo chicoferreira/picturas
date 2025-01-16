@@ -24,6 +24,4 @@ WORKDIR /app
 
 COPY --from=builder /app/target/release/tools-ms /usr/local/bin/tools-ms
 
-EXPOSE 8000
-
-CMD ["/usr/local/bin/projects-ms"]
+CMD ["/usr/local/bin/tools-ms"]

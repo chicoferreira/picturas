@@ -1,0 +1,13 @@
+services:
+  tools-ms:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PICTURAS_AVAILABLE_TOOLS=crop,scale,addBorder,adjustBrightness,adjustContrast,rotate,blur,ocr
+      - RUST_LOG=debug
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - PICTURAS_RESULTS_EXCHANGE=picturas.tools
+      - PICTURAS_RESULTS_ROUTING_KEY=results

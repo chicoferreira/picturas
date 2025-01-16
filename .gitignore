@@ -2,8 +2,6 @@ target/
 
 .idea/
 
-.sqlx
-
 # Logs
 logs
 *.log

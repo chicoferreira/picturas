@@ -14,6 +14,6 @@ RUN cargo build --release
 
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
-COPY --from=builder /app/target/release/projects-ms .
+COPY --from=builder /app/target/release/users-ms .
 EXPOSE ${BIND_PORT}
-CMD ["./projects-ms"]
+CMD ["./users-ms"]

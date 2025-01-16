@@ -13,7 +13,11 @@ pub struct Config {
     #[arg(long, env)]
     pub pg_password: String,
     #[arg(long, env)]
-    pub bind_addr: String,
+    pub pg_database: String,
+    #[arg(long, env)]
+    pub bind_ip: String,
+    #[arg(long, env, default_value_t = 8080)]
+    pub bind_port: u16,
     #[arg(long, env, value_parser = parse_duration)]
     pub access_token_max_age: Duration,
     #[arg(long, env, value_parser = parse_duration)]
