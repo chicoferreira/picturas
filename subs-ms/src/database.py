@@ -7,8 +7,8 @@ url_obj = URL.create(
     drivername='postgresql',
     username='postgres',
     password='postgres',
-    host='localhost',
-    port='5433',
+    host='db',
+    port='5432',
     database='subscriptions'
 )
 

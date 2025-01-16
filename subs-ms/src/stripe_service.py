@@ -53,6 +53,7 @@ async def create_checkout_session(req: Request, db: Session = Depends(get_db)):
         )
 
         sub = Subscription(
+            session_id = session.id,
             user_id = user_id,
             price = 10,
             stripe_subscription_id = session.subscription,
@@ -61,7 +62,7 @@ async def create_checkout_session(req: Request, db: Session = Depends(get_db)):
             status = 'inactive'
         )
 
-        new_subscription = new_sub(sub, db)
+        new_subscription = await new_sub(sub, db)
 
         return JSONResponse(
             status_code=200,
@@ -78,6 +79,11 @@ async def create_checkout_session(req: Request, db: Session = Depends(get_db)):
 async def handle_webhook(req: Request, db: Session = Depends(get_db)):
     payload = await req.body()
     sig_header = req.headers.get('Stripe-Signature')
+
+    record = db.query(Subscription).filter_by(session_id = payload['id']).first()
+    retrieved_session = stripe.checkout.Session.retrieve(payload["id"])
+    record.stripe_subscription_id = retrieved_session.subscription
+    await db.commit()
 
     try:
         event = stripe.Webhook.construct_event(

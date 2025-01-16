@@ -7,8 +7,9 @@ app = FastAPI()
 
 app.include_router(stripe_service.router)
 
+@app.on_event('startup')
 async def startup():
-    await engine.begin().run_sync(Base.metadata.create_all)
+    Base.metadata.create_all(bind=engine)
 
 @app.get('/')
 async def main():
