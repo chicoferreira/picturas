@@ -22,6 +22,10 @@ pub enum AppError {
     JwtError(#[from] jsonwebtoken::errors::Error),
     #[error("invalid password")]
     InvalidPassword,
+    #[error("invalid refresh token")]
+    InvalidRefreshToken,
+    #[error("unauthorized")]
+    Unauthorized,
 }
 
 pub type AppResult<T> = Result<T, AppError>;
@@ -64,6 +68,12 @@ impl IntoResponse for AppError {
                 "Validation error".to_string(),
                 serde_json::to_value(err).ok(),
             ),
+            AppError::InvalidRefreshToken => (
+                StatusCode::UNAUTHORIZED,
+                "Invalid refresh token".to_string(),
+                None,
+            ),
+            AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized".to_string(), None),
             AppError::SqlxError(ref err) => {
                 error!(error = ?err, "Database error occurred");
                 internal_server_error()

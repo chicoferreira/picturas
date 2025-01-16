@@ -39,3 +39,6 @@ coverage
 *.tsbuildinfo
 
 .env
+
+keys/
+images/

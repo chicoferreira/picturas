@@ -1,4 +1,5 @@
-use crate::{password, AppResult, AppState, RegisterRequest};
+use crate::router::RegisterRequest;
+use crate::{password, AppResult, AppState};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -21,6 +22,14 @@ pub struct User {
 pub async fn get_user_from_email(email: String, state: &AppState) -> AppResult<Option<User>> {
     Ok(
         sqlx::query_as!(User, "SELECT * FROM users WHERE email = $1", email)
+            .fetch_optional(&state.pg_pool)
+            .await?,
+    )
+}
+
+pub async fn get_user_by_uuid(uuid: Uuid, state: &AppState) -> AppResult<Option<User>> {
+    Ok(
+        sqlx::query_as!(User, "SELECT * FROM users WHERE uuid = $1", uuid)
             .fetch_optional(&state.pg_pool)
             .await?,
     )
