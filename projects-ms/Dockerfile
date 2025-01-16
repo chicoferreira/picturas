@@ -14,6 +14,7 @@ RUN cargo build --release
 
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/target/release/projects-ms .
 EXPOSE ${BIND_PORT}
 CMD ["./projects-ms"]

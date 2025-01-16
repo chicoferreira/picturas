@@ -8,6 +8,10 @@ services:
       POSTGRES_DB: ${PG_DATABASE}
     volumes:
       - db-users-ms:/var/lib/postgresql/data
+    networks:
+      - picturas-network
+    healthcheck:
+      test: pg_isready -U ${PG_USER} -d ${PG_DATABASE} -h localhost
   users-ms:
     build:
       context: .
@@ -33,6 +37,11 @@ services:
       - access_token_public_key
     ports:
       - ${BIND_PORT}:${BIND_PORT}
+    networks:
+      - picturas-network
+    depends_on:
+      db-users-ms:
+        condition: service_healthy
 volumes:
   db-users-ms:
 

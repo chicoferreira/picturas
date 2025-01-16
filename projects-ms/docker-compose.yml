@@ -8,6 +8,10 @@ services:
       POSTGRES_DB: ${PG_DATABASE}
     volumes:
       - db-projects-ms:/var/lib/postgresql/data
+    networks:
+      - picturas-network
+    healthcheck:
+      test: pg_isready -U ${PG_USER} -d ${PG_DATABASE} -h localhost
   rabbitmq:
     image: rabbitmq:4-management-alpine
     container_name: rabbitmq
@@ -19,6 +23,8 @@ services:
       test: rabbitmq-diagnostics check_port_connectivity
       interval: 5s
       timeout: 30s
+    networks:
+      - picturas-network
   projects-ms:
     build:
       context: .
@@ -44,12 +50,21 @@ services:
     ports:
       - ${BIND_PORT}:${BIND_PORT}
     depends_on:
-      - db-projects-ms
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
+      db-projects-ms:
+        condition: service_healthy
     volumes:
       - images:/images
+    networks:
+      - picturas-network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:${BIND_PORT}/api/v1/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 volumes:
-  images:
   db-projects-ms:
   rabbitmq-data:
   rabbitmq-logs:
