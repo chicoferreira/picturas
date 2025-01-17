@@ -22,8 +22,12 @@ RUN cargo build --release --bin tools-ms
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y \
+    libleptonica-dev \
+    libclang-dev \
+    libtesseract-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder /app/target/release/tools-ms /usr/local/bin/tools-ms
 
-EXPOSE 8000
-
-CMD ["/usr/local/bin/projects-ms"]
+CMD ["/usr/local/bin/tools-ms"]

@@ -1,0 +1,12 @@
+include:
+  - tools-ms/docker-compose.yml
+  - projects-ms/docker-compose.yml
+  - users-ms/docker-compose.yml
+  - bg-remover-tool-ms/docker-compose.yml
+  - watermark-tool-ms/docker-compose.yml
+
+networks:
+  picturas-network:
+
+volumes:
+  images:

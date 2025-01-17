@@ -67,6 +67,28 @@ Content-Type: application/json
 
 ### Apply the added tools to all the images in a project
 POST http://localhost:8000/api/v1/projects/{{project}}/tools/apply
+x-user-id: 4d5b989d-78b1-456c-a9e3-07b0b786bdf1
+x-user-name: Chico
+x-user-email: mail@chicoferreira.dev
+
+### Sets a tools list to the project
+PUT http://localhost:8000/api/v1/projects/{{project}}/tools
+Content-Type: application/json
+
+[
+  {
+    "procedure": "blur",
+    "parameters": {
+      "radius": 10
+    }
+  },
+  {
+    "procedure": "rotate",
+    "parameters": {
+      "angle": 90
+    }
+  }
+]
 
 ### Get all image versions from a project
 GET http://localhost:8000/api/v1/projects/{{project}}/tools/images
@@ -77,3 +99,17 @@ GET http://localhost:8000/api/v1/projects/{{project}}/tools/images
 
 ### Download an image version from a project
 GET http://localhost:8000/api/v1/projects/{{project}}/tools/images/{{image_version}}
+
+## websocket implementation is broken
+## wscat -c ws://127.0.0.1:8000/api/v1/projects/89ca8ff4-e77e-4368-88bf-5c73c6c088c0/ws -H x-user-id:4d5b989d-78b1-456c-a9e3-07b0b786bdf1 -H x-user-name:Chico -H x-user-email:mail@chicoferreira.dev
+### Get a websocket connection to a project
+WEBSOCKET ws://localhost:8000/api/v1/projects/{{project}}/ws
+x-user-id: 4d5b989d-78b1-456c-a9e3-07b0b786bdf1
+x-user-name: Chico
+x-user-email: mail@chicoferreira.dev
+
+> {%
+    response.body.onEachMessage((message, _unsubscribe, _output) => {
+        client.log("We received a message from the server: " + message);
+    });
+%}

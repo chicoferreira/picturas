@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
-
 import {
   Accordion,
   AccordionContent,
@@ -22,7 +21,6 @@ const accordionItems = [
     <Button variant="link">
     Link
   </Button>
-
     <p class="text-red-500">{{ 'ola' }}</p>
   </div>
   <Accordion type="single" class="w-full" :default-value="defaultValues">

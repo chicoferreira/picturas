@@ -12,7 +12,7 @@ pub enum Tool {
     Crop { start: (u32, u32), end: (u32, u32) },
     Scale { x: u32, y: u32 },
     AddBorder { size: u32, color: (u8, u8, u8) },
-    AdjustBrightness { value: u8 },
+    AdjustBrightness { value: f32 },
     AdjustContrast { value: f32 },
     Rotate { angle: f32 },
     Blur { radius: i32 },
@@ -55,8 +55,17 @@ fn add_border(image: PhotonImage, border_size: u32, color: (u8, u8, u8)) -> Phot
     )
 }
 
-fn adjust_brightness(_image: PhotonImage, _value: u8) -> PhotonImage {
-    unimplemented!()
+fn adjust_brightness(mut image: PhotonImage, value: f32) -> PhotonImage {
+    let value = value.clamp(-1f32, 1f32);
+
+    if value > 0.0 {
+        photon_rs::effects::inc_brightness(&mut image, (value * 255.0) as u8);
+        println!("Increased brightness by {}", (value * 255.0));
+    } else {
+        photon_rs::effects::dec_brightness(&mut image, (-value * 255.0) as u8);
+        println!("Decreased brightness by {}", (-value * 255.0));
+    }
+    image
 }
 
 fn adjust_contrast(mut image: PhotonImage, value: f32) -> PhotonImage {

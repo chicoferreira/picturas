@@ -1,5 +1,4 @@
-# Stage 1: Planner
-FROM lukemathwalker/cargo-chef:latest-rust-latest AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
 WORKDIR /app
 
 FROM chef AS planner
@@ -8,16 +7,14 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
-
 RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
-RUN cargo build --release --bin projects-ms
+ENV SQLX_OFFLINE=true
+RUN cargo build --release
 
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
-
-COPY --from=builder /app/target/release/projects-ms /usr/local/bin/projects-ms
-
-EXPOSE 8000
-
-CMD ["/usr/local/bin/projects-ms"]
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/target/release/projects-ms .
+EXPOSE ${BIND_PORT}
+CMD ["./projects-ms"]

@@ -2,7 +2,8 @@ use crate::error::Result;
 use crate::tool::model::{ImageVersion, RequestedTool, Tool};
 use crate::tool::queue;
 use crate::tool::queue::QueuedImageApplyTool;
-use crate::{image, AppState};
+use crate::{config, image, AppState};
+use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use tracing::{debug, info};
 use uuid::Uuid;
@@ -59,8 +60,6 @@ pub async fn add_tool(
         Some(last_applied_tool) => last_applied_tool.position,
     };
 
-    debug!(last_position, "Last position");
-
     let tool = Tool {
         id: Uuid::new_v4(),
         project_id: project_uuid,
@@ -83,8 +82,70 @@ pub async fn add_tool(
     Ok(tool)
 }
 
-pub async fn apply_added_tools(project_uuid: Uuid, state: &AppState) -> Result<()> {
-    // TODO: delete older image versions
+async fn delete_image_versions(project_uuid: Uuid, state: &AppState) -> Result<()> {
+    let delete_files = tokio::fs::remove_dir_all(config::generate_image_version_folder_uri(
+        project_uuid,
+        state,
+    ));
+
+    let delete_sql = sqlx::query!(
+        "DELETE FROM image_versions WHERE project_id = $1",
+        project_uuid
+    )
+    .execute(&state.db_pool);
+
+    let (_delete_files, delete_sql) = tokio::join!(delete_files, delete_sql);
+
+    delete_sql?;
+
+    Ok(())
+}
+
+pub async fn update_tools(
+    project_uuid: Uuid,
+    tools: Vec<RequestedTool>,
+    state: &AppState,
+) -> Result<Vec<Tool>> {
+    delete_image_versions(project_uuid, state).await?;
+
+    sqlx::query!("DELETE FROM tools WHERE project_id = $1", project_uuid)
+        .execute(&state.db_pool)
+        .await?;
+
+    let mut result = vec![];
+
+    for (position, requested_tool) in tools.into_iter().enumerate() {
+        let tool = Tool {
+            id: Uuid::new_v4(),
+            project_id: project_uuid,
+            position: position as i32 + 1,
+            procedure: requested_tool.procedure.clone(),
+            parameters: serde_json::to_value(requested_tool.parameters.clone()).unwrap(),
+        };
+
+        sqlx::query!(
+            "INSERT INTO tools (id, project_id, position, procedure, parameters) VALUES ($1, $2, $3, $4, $5)",
+            tool.id,
+            tool.project_id,
+            tool.position,
+            tool.procedure,
+            tool.parameters
+        )
+            .execute(&state.db_pool)
+            .await?;
+
+        result.push(tool);
+    }
+
+    Ok(result)
+}
+
+pub async fn apply_added_tools(
+    project_uuid: Uuid,
+    user_uuid: Uuid,
+    state: &AppState,
+) -> Result<()> {
+    delete_image_versions(project_uuid, state).await?;
 
     let (images, tools) = tokio::join!(
         image::controller::get_original_images(project_uuid, state),
@@ -101,6 +162,7 @@ pub async fn apply_added_tools(project_uuid: Uuid, state: &AppState) -> Result<(
 
         let queued_image_apply_tool = QueuedImageApplyTool::new_generate_output_uri(
             project_uuid,
+            user_uuid,
             image.id,
             image_input_uri,
             requested_tools.clone(),
@@ -112,6 +174,23 @@ pub async fn apply_added_tools(project_uuid: Uuid, state: &AppState) -> Result<(
     }
 
     Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ImageVersionWithUrl {
+    #[serde(flatten)]
+    image_version: ImageVersion,
+    url: String,
+}
+
+impl ImageVersionWithUrl {
+    pub fn from_image_version(image_version: ImageVersion, state: &AppState) -> Self {
+        let url = format!(
+            "{}/api/v1/projects/{}/tools/images/{}",
+            state.config.picturas_public_url, image_version.project_id, image_version.id
+        );
+        Self { url, image_version }
+    }
 }
 
 pub async fn save_image_version(image_version: &ImageVersion, state: &AppState) -> Result<()> {

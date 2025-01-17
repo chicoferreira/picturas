@@ -1,6 +1,8 @@
 use crate::tool::amqp::rabbit_controller::RabbitMqControllerError;
 use axum::extract::multipart::MultipartError;
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use axum::Json;
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, AppError>;
@@ -19,23 +21,48 @@ pub enum AppError {
     Io(#[from] std::io::Error),
     #[error("rabbitmq controller error: {0}")]
     RabbitMq(#[from] RabbitMqControllerError),
-    #[error("{0}")]
-    Other(#[from] anyhow::Error),
+    #[error("missing header: {0}")]
+    MissingHeader(&'static str),
+    #[error("invalid UUID in header: {0}")]
+    InvalidUuid(String),
+    #[error("not an image: {0}")]
+    NotAnImage(String),
+}
+
+#[derive(Debug, serde::Serialize)]
+struct ErrorBody {
+    error: String,
 }
 
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
         tracing::error!("{}", self);
-        let body = self.to_string();
         let status = match self {
-            AppError::Sqlx(_) => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            AppError::EntityNotFound => axum::http::StatusCode::NOT_FOUND,
-            AppError::Multipart(_) => axum::http::StatusCode::BAD_REQUEST,
-            AppError::MultipartMissing(_) => axum::http::StatusCode::BAD_REQUEST,
-            AppError::Io(_) => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            AppError::Other(_) => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            AppError::RabbitMq(_) => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::Sqlx(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::Io(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::RabbitMq(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::EntityNotFound => StatusCode::NOT_FOUND,
+            AppError::Multipart(_) => StatusCode::BAD_REQUEST,
+            AppError::MultipartMissing(_) => StatusCode::BAD_REQUEST,
+            AppError::MissingHeader(_) => StatusCode::BAD_REQUEST,
+            AppError::InvalidUuid(_) => StatusCode::BAD_REQUEST,
+            AppError::NotAnImage(_) => StatusCode::BAD_REQUEST,
         };
-        (status, body).into_response()
+
+        let error = match self {
+            AppError::Sqlx(_) => "Database error".to_string(),
+            AppError::EntityNotFound => "Entity not found".to_string(),
+            AppError::Multipart(err) => format!("Multipart error: {err}"),
+            AppError::MultipartMissing(missing) => format!("Missing multipart field: {missing}"),
+            AppError::Io(_) => "Internal IO error".to_string(),
+            AppError::RabbitMq(_) => "Internal controller error".to_string(),
+            AppError::MissingHeader(header) => format!("Missing header: {header}"),
+            AppError::InvalidUuid(uuid) => format!("Invalid UUID in header: {uuid}"),
+            AppError::NotAnImage(content_type) => format!("Not an image: {content_type}"),
+        };
+
+        let body = ErrorBody { error };
+
+        (status, Json(body)).into_response()
     }
 }

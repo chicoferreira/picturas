@@ -91,11 +91,7 @@ pub async fn delete_image(
     Ok(Some(image))
 }
 
-pub async fn get_image(
-    project_id: Uuid,
-    image_id: Uuid,
-    state: &AppState,
-) -> Result<(String, Vec<u8>)> {
+pub async fn get_image(project_id: Uuid, image_id: Uuid, state: &AppState) -> Result<Vec<u8>> {
     info!("Fetching image with ID: {}", image_id);
     let image = sqlx::query_as!(
         Image,
@@ -114,5 +110,5 @@ pub async fn get_image(
         path = ?path,
         "Fetched image"
     );
-    Ok((image.name, file))
+    Ok(file)
 }
