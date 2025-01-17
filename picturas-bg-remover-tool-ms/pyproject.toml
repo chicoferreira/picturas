@@ -2,7 +2,7 @@
 name = "picturas-bg-remover-tool-ms"
 version = "0.1.0"
 description = "PictuRAS microservice (tool) that removes the background of an input image."
-authors = ["Afonso Costa <d13690@di.uminho.pt>", "Paulo Sousa <d7157@di.uminho.pt>"]
+authors = ["Pedro Sousa <pg55994@alunos.uminho.pt>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
