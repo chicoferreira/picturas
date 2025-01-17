@@ -6,6 +6,7 @@ use crate::tool::model::{ImageVersion, RequestedTool};
 use crate::tool::{amqp, controller, websocket};
 use crate::{config, AppState};
 use chrono::Utc;
+use lapin::message;
 use serde_json::json;
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
@@ -108,7 +109,12 @@ pub async fn add_to_queue(
 }
 
 pub async fn run_rabbit_mq_results_read_loop(mut consumer: RabbitMqConsumer, state: AppState) {
-    while let Ok(message) = consumer.next_result_message().await {
+    loop {
+        let message = consumer.next_result_message().await;
+        let Ok(message) = message else {
+            error!("Failed to receive message: {:?}", message);
+            continue;
+        };
         let Some((_, (tool_uuid, queued_tool))) =
             state.queued_tools.remove(&message.correlation_id)
         else {
