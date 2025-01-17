@@ -18,7 +18,7 @@ pub struct RequestMessage {
 pub struct ResponseMessage {
     pub message_id: String,
     pub correlation_id: Uuid,
-    pub timestamp: DateTime<Utc>,
+    pub timestamp: String,
     #[serde(flatten)]
     pub status: ResponseStatus,
     pub metadata: Metadata,

@@ -2,6 +2,7 @@ include:
   - tools-ms/docker-compose.yml
   - projects-ms/docker-compose.yml
   - users-ms/docker-compose.yml
+  - picturas-bg-remover-tool-ms/docker-compose.yml
 
 networks:
   picturas-network:

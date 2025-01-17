@@ -38,5 +38,6 @@ coverage
 
 .env
 
-keys/
 images/
+**/keys/*.key
+**/keys/*.pub

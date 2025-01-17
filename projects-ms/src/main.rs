@@ -36,6 +36,11 @@ async fn main() {
         .await
         .expect("Failed to connect to Postgres.");
 
+    sqlx::migrate!()
+        .run(&pg_pool)
+        .await
+        .expect("Failed to run migrations");
+
     let bind_address = (IpAddr::from_str(&config.bind_ip).unwrap(), config.bind_port);
     let listener = tokio::net::TcpListener::bind(bind_address).await.unwrap();
 

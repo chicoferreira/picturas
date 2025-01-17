@@ -1,0 +1,20 @@
+services:
+  bg-remover-ms:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - PICTURAS_RESULTS_EXCHANGE=picturas.tools
+      - PICTURAS_RESULTS_ROUTING_KEY=results
+    volumes:
+      - images:/images
+    networks:
+      - picturas-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      projects-ms:
+        condition: service_healthy
