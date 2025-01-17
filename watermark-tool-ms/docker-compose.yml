@@ -1,0 +1,26 @@
+services:
+  watermark-tool-ms:
+    image: prcsousa/picturas-watermark-tool-ms:latest
+    container_name: watermark-tool-ms
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - PICTURAS_LOG_LEVEL=INFO
+      - RABBITMQ_PORT
+      - RABBITMQ_USER
+      - RABBITMQ_PASS
+      - RABBITMQ_REQUESTS_QUEUE_NAME
+      - RABBITMQ_RESULTS_EXCHANGE
+      - RABBITMQ_RESULTS_ROUTING_KEY
+      - PICTURAS_LOG_LEVEL
+      - PICTURAS_MS_NAME
+      - PICTURAS_NUM_THREADS
+      - PICTURAS_WATERMARK_IMAGE_PATH
+    volumes:
+      - images:/images
+    networks:
+      - picturas-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      projects-ms:
+        condition: service_healthy

@@ -1,6 +1,6 @@
 name: picturas-dev
 services:
-  db:
+  db-dev:
     image: postgres:14.1-alpine
     restart: always
     environment:
@@ -11,9 +11,8 @@ services:
       - "5432:5432"
     volumes:
       - db:/var/lib/postgresql/data
-  rabbitmq:
+  rabbitmq-dev:
     image: rabbitmq:4-management-alpine
-    container_name: rabbitmq
     restart: always
     ports:
       - "15672:15672"

@@ -46,7 +46,7 @@ services:
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_USER=guest
       - RABBITMQ_PASSWORD=guest
-      - RUST_LOG=debug
+      - RUST_LOG=INFO
     ports:
       - ${BIND_PORT}:${BIND_PORT}
     depends_on:

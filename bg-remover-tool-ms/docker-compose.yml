@@ -7,8 +7,12 @@ services:
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_USER=guest
       - RABBITMQ_PASSWORD=guest
-      - PICTURAS_RESULTS_EXCHANGE=picturas.tools
-      - PICTURAS_RESULTS_ROUTING_KEY=results
+      - RABBITMQ_REQUESTS_QUEUE_NAME
+      - RABBITMQ_RESULTS_EXCHANGE
+      - RABBITMQ_RESULTS_ROUTING_KEY
+      - PICTURAS_LOG_LEVEL=INFO
+      - PICTURAS_MS_NAME
+      - PICTURAS_NUM_THREADS
     volumes:
       - images:/images
     networks:
