@@ -63,11 +63,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { useUserStore } from '@/stores/user'
+import router from '@/router'
 
 interface FormData {
   email: string
@@ -119,12 +121,18 @@ const handleSubmit = async () => {
     await new Promise((resolve) => setTimeout(resolve, 1000))
     console.log('Form submitted:', form)
     // Reset form after successful submission
-    form.email = ''
-    form.password = ''
+    // TODO alterar para obter dados da api e guardar na store
+    useUserStore().login('João Miguel Lobo Fernandes',form.email,'token',true,'1')
+    //useUserStore().login('João Miguel Lobo Fernandes',form.email,'token',false,'2')
+    router.push('/projects')
+
   } catch (error) {
     console.error('Error submitting form:', error)
   } finally {
     isSubmitting.value = false
   }
 }
+onMounted(() => {
+    useUserStore().logout()
+  })
 </script>

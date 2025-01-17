@@ -3,20 +3,15 @@
       <!-- Sidebar -->
       <div class="w-64 bg-[#0f1629] p-6 flex flex-col">
         <!-- User Info -->
-        <div v-if="useUserStore().loggedIn()" class="flex items-center space-x-3 mb-8">
+        <div class="flex items-center space-x-3 mb-8">
           <Avatar class="h-10 w-10 bg-white">
             <AvatarImage src="/placeholder.svg" />
             <AvatarFallback class="bg-white text-[#030712]">JD</AvatarFallback>
           </Avatar>
           <div class="flex flex-col">
-            <span class="text-white">{{useUserStore().name}}</span>
-            <span class="text-sm text-[#969696]">{{useUserStore().email}}</span>
+            <span class="text-white">JMF</span>
+            <span class="text-sm text-[#969696]">jmf@email.com</span>
           </div>
-        </div>
-        <div v-else>
-          <Button class="w-full px-4 py-2 mb-10 text-white rounded-full" @click="router.push('/register')">
-            Sign In
-          </Button>
         </div>
   
         <!-- Projects List -->
@@ -41,11 +36,11 @@
           <h1 class="text-2xl text-center font-bold bg-gradient-to-r from-[#6D28D9] to-white bg-clip-text text-transparent tracking-tight"
                 >PICTURAS
         </h1>
-          <Button class="w-full rounded-full bg-[#6D28D9] hover:bg-[#5b21b6] text-white">
+          <Button class="w-full bg-[#6D28D9] hover:bg-[#5b21b6] text-white">
             New Project
           </Button>
           <Button 
-            class="w-full rounded-full bg-[#DD3592] hover:bg-[#c42e81] text-white"
+            class="w-full bg-[#DD3592] hover:bg-[#c42e81] text-white"
             @click="router.push('/subscriptions')"
           >
             Upgrade Subscription
@@ -126,13 +121,12 @@
   </template>
   
   <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue'
+  import { ref, computed } from 'vue'
   import { useRouter } from 'vue-router'
   import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
   import { Button } from '@/components/ui/button'
   import { Input } from '@/components/ui/input'
   import { SearchIcon, UploadIcon, PencilIcon } from 'lucide-vue-next'
-  import  { useUserStore } from '@/stores/user'
   
   interface Project {
     id: number
@@ -146,6 +140,13 @@
   const dragActive = ref(false)
   const selectedProject = ref<Project | null>(null)
   
+
+  const props = defineProps<{
+    idProject: string,
+    idImage: string
+  }>()
+
+
   const projects = ref<Project[]>([
     {
       id: 1,
@@ -167,6 +168,12 @@
     }
   ])
   
+    const getImages = () => {
+      const response = await fetch(`https://api.unsplash.com/photos/?client_id=${process.env.VUE_APP_UNSPLASH_ACCESS_KEY}`)
+      const data = await response.json()
+      console.log(data)
+    }
+
   const filteredProjects = computed(() => {
     let filtered = projects.value
     
@@ -184,28 +191,6 @@
     selectedProject.value = selectedProject.value?.id === project.id ? null : project
   }
   
-  const getProjects = () => {
-    // TODO pedido a API para obter os projetos do usuário
-    // não sei sei é preciso criar uma storage para guardar os projetos, por causa de haver usuarios sem conta
-
-    if (useUserStore().loggedIn()) {
-      // TODO alterar para usar api de dados
-      /*
-      const response = await fetch(`https://PedidoAPIProjetos/${useUserStore().uuid}`)
-      const data = await response.json()
-      console.log(data)
-      */
-     console.log('Está logado')
-    }
-    else
-    {
-      //const response = await fetch(`https://PedidoAPIProjetos/`)}`)
-      
-      //projects.value = []
-      console.log('Não está logado')
-    }
-  }
-
   const handleDrop = (event: DragEvent) => {
     dragActive.value = false
     const files = event.dataTransfer?.files
@@ -214,9 +199,6 @@
       console.log('File dropped:', files[0])
     }
   }
-  onMounted(() => {
-    getProjects()
-  })
   </script>
   
   

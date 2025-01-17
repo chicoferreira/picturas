@@ -59,7 +59,7 @@
 
         <button
           type="submit"
-          class="w-full px-4 py-2 bg-[#6D28D9] text-white rounded-md hover:bg-[#5b21b6] focus:outline-none focus:ring-2 focus:ring-[#6D28D9] focus:ring-offset-2 focus:ring-offset-[#030712] transition-colors"
+          class=" w-full px-4 py-2 bg-[#6D28D9] text-white rounded-full hover:bg-[#5b21b6] focus:outline-none focus:ring-2 focus:ring-[#6D28D9] focus:ring-offset-2 focus:ring-offset-[#030712] transition-colors"
           :disabled="isSubmitting"
         >
           {{ isSubmitting ? 'Creating Account...' : 'Create Account' }}
@@ -70,7 +70,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import { useUserStore } from '@/stores/user'
+import router from '@/router'
 
 interface FormData {
   email: string
@@ -130,17 +132,23 @@ const handleSubmit = async () => {
   isSubmitting.value = true
 
   try {
+    // TODO alterar para usar API de dados
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000))
     console.log('Form submitted:', form)
     // Reset form after successful submission
-    form.email = ''
-    form.username = ''
-    form.password = ''
+    useUserStore().login(form.username,form.email, 'token', true, '1')
+    //useUserStore().login(form.username,form.email, 'token', false, '2')
+    console.log('Loggin in:')
+    router.push('/projects')
   } catch (error) {
     console.error('Error submitting form:', error)
   } finally {
     isSubmitting.value = false
   }
 }
+
+onMounted (() => {
+  useUserStore().logout()
+})
 </script>
