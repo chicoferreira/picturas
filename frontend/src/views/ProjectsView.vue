@@ -3,14 +3,14 @@
       <!-- Sidebar -->
       <div class="w-64 bg-[#0f1629] p-6 flex flex-col">
         <!-- User Info -->
-        <div v-if="useUserStore().loggedIn()" class="flex items-center space-x-3 mb-8">
+        <div v-if="user.loggedIn()" class="flex items-center space-x-3 mb-8">
           <Avatar class="h-10 w-10 bg-white">
             <AvatarImage src="/placeholder.svg" />
             <AvatarFallback class="bg-white text-[#030712]">JD</AvatarFallback>
           </Avatar>
           <div class="flex flex-col">
-            <span class="text-white">{{useUserStore().name}}</span>
-            <span class="text-sm text-[#969696]">{{useUserStore().email}}</span>
+            <span class="text-white">{{user.name}}</span>
+            <span class="text-sm text-[#969696]">{{user.email}}</span>
           </div>
         </div>
         <div v-else>
@@ -141,6 +141,7 @@
     lastEdited: number
   }
   
+  const user = useUserStore()
   const router = useRouter()
   const searchQuery = ref('')
   const dragActive = ref(false)
