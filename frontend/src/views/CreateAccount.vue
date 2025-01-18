@@ -62,7 +62,7 @@ const handleSubmit = async () => {
   isSubmitting.value = true
 
   await registerUser(form.username, form.email, form.password)
-  
+
   isSubmitting.value = false
 }
 </script>

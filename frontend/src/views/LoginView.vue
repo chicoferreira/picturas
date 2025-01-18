@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth'
 
-const { loginUser } = useAuth();
+const { loginUser } = useAuth()
 
 interface FormData {
   email: string
@@ -54,7 +54,7 @@ const handleSubmit = async () => {
   isSubmitting.value = true
 
   await loginUser(form.email, form.password)
-  
+
   isSubmitting.value = false
 }
 </script>

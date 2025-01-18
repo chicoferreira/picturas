@@ -57,7 +57,11 @@ const activeTab = ref('account')
           </nav>
 
           <div class="mt-auto pt-8">
-            <h1 class="font-bold bg-gradient-to-r from-[#6D28D9] to-white bg-clip-text text-transparent tracking-tight text-4xl font-bold text-center">PICTURAS</h1>
+            <h1
+              class="font-bold bg-gradient-to-r from-[#6D28D9] to-white bg-clip-text text-transparent tracking-tight text-4xl font-bold text-center"
+            >
+              PICTURAS
+            </h1>
           </div>
         </div>
 

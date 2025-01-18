@@ -1,7 +1,7 @@
-import { useRouter } from 'vue-router';
+import { useRouter } from 'vue-router'
 
 export function useAuth() {
-  const router = useRouter();
+  const router = useRouter()
 
   const registerUser = async (username: string, email: string, password: string) => {
     try {
@@ -11,21 +11,21 @@ export function useAuth() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ name: username, email, password }),
-      });
+      })
 
       if (!response.ok) {
-        const error = await response.json();
-        alert(`Erro: ${error.message}`);
-        return;
+        const error = await response.json()
+        alert(`Erro: ${error.message}`)
+        return
       }
 
-      alert('Conta registada com sucesso!');
-      router.push('/projects');
+      alert('Conta registada com sucesso!')
+      router.push('/projects')
     } catch (error: any) {
-      console.error('Erro ao registar:', error.message);
-      alert(`Erro ao registar: ${error.message}`);
+      console.error('Erro ao registar:', error.message)
+      alert(`Erro ao registar: ${error.message}`)
     }
-  };
+  }
 
   const loginUser = async (email: string, password: string) => {
     try {
@@ -35,20 +35,20 @@ export function useAuth() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, password }),
-      });
+      })
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to login');
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to login')
       }
 
-      alert('Login efetuado com sucesso!');
-      router.push('/projects');
+      alert('Login efetuado com sucesso!')
+      router.push('/projects')
     } catch (error: any) {
-      console.error('Erro ao efetuar login:', error.message);
-      alert(`Erro ao efetuar login: ${error.message}`);
+      console.error('Erro ao efetuar login:', error.message)
+      alert(`Erro ao efetuar login: ${error.message}`)
     }
-  };
+  }
 
-  return { registerUser, loginUser };
+  return { registerUser, loginUser }
 }
