@@ -24,9 +24,7 @@ async function onSubmit(event: Event) {
     <form @submit="onSubmit">
       <div class="grid gap-2">
         <div class="grid gap-1">
-          <Label class="sr-only" for="email">
-            Email
-          </Label>
+          <Label class="sr-only" for="email"> Email </Label>
           <Input
             id="email"
             placeholder="name@example.com"
@@ -48,9 +46,7 @@ async function onSubmit(event: Event) {
         <span class="w-full border-t" />
       </div>
       <div class="relative flex justify-center text-xs uppercase">
-        <span class="bg-background px-2 text-muted-foreground">
-          Or continue with
-        </span>
+        <span class="bg-background px-2 text-muted-foreground"> Or continue with </span>
       </div>
     </div>
     <Button variant="outline" type="button" :disabled="isLoading">

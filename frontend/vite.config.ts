@@ -11,20 +11,13 @@ import tailwindcss from 'tailwindcss'
 export default defineConfig({
   css: {
     postcss: {
-      plugins: [
-        tailwindcss,
-        autoprefixer
-      ]
-    }
+      plugins: [tailwindcss, autoprefixer],
+    },
   },
-  plugins: [
-    vue(),
-    vueJsx(),
-    vueDevTools(),
-  ],
+  plugins: [vue(), vueJsx(), vueDevTools()],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
 })

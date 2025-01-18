@@ -1,3 +1,64 @@
+<script setup lang="ts">
+import { ref, reactive } from 'vue'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { useAuth } from '@/lib/auth'
+
+const { loginUser } = useAuth()
+
+interface FormData {
+  email: string
+  password: string
+}
+
+interface FormErrors {
+  email?: string
+  password?: string
+}
+
+const form = reactive<FormData>({
+  email: '',
+  password: '',
+})
+
+const errors = reactive<FormErrors>({})
+const isSubmitting = ref(false)
+
+const validateForm = (): boolean => {
+  errors.email = ''
+  errors.password = ''
+
+  let isValid = true
+
+  if (!form.email) {
+    errors.email = 'Email is required'
+    isValid = false
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+    errors.email = 'Invalid email format'
+    isValid = false
+  }
+
+  if (!form.password) {
+    errors.password = 'Password is required'
+    isValid = false
+  }
+
+  return isValid
+}
+
+const handleSubmit = async () => {
+  if (!validateForm()) return
+
+  isSubmitting.value = true
+
+  await loginUser(form.email, form.password)
+
+  isSubmitting.value = false
+}
+</script>
+
 <template>
   <div class="min-h-screen flex flex-col items-center justify-center bg-[#030712] p-6">
     <div class="w-full max-w-md space-y-8">
@@ -61,70 +122,3 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-
-interface FormData {
-  email: string
-  password: string
-}
-
-interface FormErrors {
-  email?: string
-  password?: string
-}
-
-const form = reactive<FormData>({
-  email: '',
-  password: '',
-})
-
-const errors = reactive<FormErrors>({})
-const isSubmitting = ref(false)
-
-const validateForm = (): boolean => {
-  errors.email = ''
-  errors.password = ''
-
-  let isValid = true
-
-  if (!form.email) {
-    errors.email = 'Email is required'
-    isValid = false
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-    errors.email = 'Invalid email format'
-    isValid = false
-  }
-
-  if (!form.password) {
-    errors.password = 'Password is required'
-    isValid = false
-  }
-
-  return isValid
-}
-
-const handleSubmit = async () => {
-  if (!validateForm()) return
-
-  isSubmitting.value = true
-
-  try {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    console.log('Form submitted:', form)
-    // Reset form after successful submission
-    form.email = ''
-    form.password = ''
-  } catch (error) {
-    console.error('Error submitting form:', error)
-  } finally {
-    isSubmitting.value = false
-  }
-}
-</script>

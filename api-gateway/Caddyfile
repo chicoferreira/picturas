@@ -1,29 +1,37 @@
 {
-    debug
-    auto_https disable_redirects
-    auto_https off
+	debug
+	auto_https disable_redirects
+	auto_https off
 }
 
 http://localhost {
-    handle /api/v1/users* {
-        reverse_proxy http://users-ms:8010
-    }
+	handle /api/v1/users* {
+		@options method OPTIONS
+		respond @options "OK" 200
 
-    handle /api/v1/projects* {
-        reverse_proxy http://projects-ms:8000
-    }
+        header Access-Control-Allow-Origin "*"
+        header Access-Control-Allow-Methods "GET, POST, OPTIONS"
+        header Access-Control-Allow-Headers "Content-Type, Authorization"
+        header Access-Control-Allow-Credentials "true"
 
-    handle /api/v1/images* {
-        reverse_proxy http://projects-ms:8000
-    }
+		reverse_proxy http://users-ms:8010
+	}
 
-    handle /api/v1/projects/*/ws {
-        reverse_proxy http://projects-ms:8000 {
-            transport http {
-                versions h1 h2
-            }
-        }
-    }
+	handle /api/v1/projects* {
+		reverse_proxy http://projects-ms:8000
+	}
 
-    respond "Not found" 404
+	handle /api/v1/images* {
+		reverse_proxy http://projects-ms:8000
+	}
+
+	handle /api/v1/projects/*/ws {
+		reverse_proxy http://projects-ms:8000 {
+			transport http {
+				versions h1 h2
+			}
+		}
+	}
+
+	respond "Not found" 404
 }

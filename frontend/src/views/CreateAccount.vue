@@ -1,76 +1,8 @@
-<template>
-  <div class="min-h-screen flex items-center justify-center bg-[#030712] p-6">
-    <div class="w-full max-w-md space-y-8">
-      <!-- Added Logo -->
-      <div class="text-center">
-        <h1
-          class="text-5xl font-bold bg-gradient-to-r from-[#6D28D9] to-white bg-clip-text text-transparent tracking-tight"
-        >
-          PICTURAS
-        </h1>
-      </div>
-
-      <div class="space-y-2 text-center">
-        <h2 class="text-3xl font-semibold tracking-tight text-white">Create Account</h2>
-        <p class="text-[#969696]">
-          Enter your email and a secure password to create your new account
-        </p>
-      </div>
-
-      <form @submit.prevent="handleSubmit" class="space-y-4">
-        <div class="space-y-2">
-          <label for="email" class="text-sm font-medium text-white"> Email </label>
-          <input
-            v-model="form.email"
-            id="email"
-            type="email"
-            required
-            class="w-full px-3 py-2 rounded-md border border-gray-800 bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-[#6D28D9] focus:border-transparent"
-            :class="{ 'border-red-500': errors.email }"
-          />
-          <p v-if="errors.email" class="text-sm text-red-500">{{ errors.email }}</p>
-        </div>
-
-        <div class="space-y-2">
-          <label for="username" class="text-sm font-medium text-white"> Username </label>
-          <input
-            v-model="form.username"
-            id="username"
-            type="text"
-            required
-            class="w-full px-3 py-2 rounded-md border border-gray-800 bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-[#6D28D9] focus:border-transparent"
-            :class="{ 'border-red-500': errors.username }"
-          />
-          <p v-if="errors.username" class="text-sm text-red-500">{{ errors.username }}</p>
-        </div>
-
-        <div class="space-y-2">
-          <label for="password" class="text-sm font-medium text-white"> Password </label>
-          <input
-            v-model="form.password"
-            id="password"
-            type="password"
-            required
-            class="w-full px-3 py-2 rounded-md border border-gray-800 bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-[#6D28D9] focus:border-transparent"
-            :class="{ 'border-red-500': errors.password }"
-          />
-          <p v-if="errors.password" class="text-sm text-red-500">{{ errors.password }}</p>
-        </div>
-
-        <button
-          type="submit"
-          class="w-full px-4 py-2 bg-[#6D28D9] text-white rounded-md hover:bg-[#5b21b6] focus:outline-none focus:ring-2 focus:ring-[#6D28D9] focus:ring-offset-2 focus:ring-offset-[#030712] transition-colors"
-          :disabled="isSubmitting"
-        >
-          {{ isSubmitting ? 'Creating Account...' : 'Create Account' }}
-        </button>
-      </form>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
+import { useAuth } from '@/lib/auth'
+
+const { registerUser } = useAuth()
 
 interface FormData {
   email: string
@@ -129,18 +61,79 @@ const handleSubmit = async () => {
 
   isSubmitting.value = true
 
-  try {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    console.log('Form submitted:', form)
-    // Reset form after successful submission
-    form.email = ''
-    form.username = ''
-    form.password = ''
-  } catch (error) {
-    console.error('Error submitting form:', error)
-  } finally {
-    isSubmitting.value = false
-  }
+  await registerUser(form.username, form.email, form.password)
+
+  isSubmitting.value = false
 }
 </script>
+
+<template>
+  <div class="min-h-screen flex items-center justify-center bg-[#030712] p-6">
+    <div class="w-full max-w-md space-y-8">
+      <!-- Added Logo -->
+      <div class="text-center">
+        <h1
+          class="text-5xl font-bold bg-gradient-to-r from-[#6D28D9] to-white bg-clip-text text-transparent tracking-tight"
+        >
+          PICTURAS
+        </h1>
+      </div>
+
+      <div class="space-y-2 text-center">
+        <h2 class="text-3xl font-semibold tracking-tight text-white">Create Account</h2>
+        <p class="text-[#969696]">
+          Enter your email and a secure password to create your new account
+        </p>
+      </div>
+
+      <form @submit.prevent="handleSubmit" class="space-y-4">
+        <div class="space-y-2">
+          <label for="username" class="text-sm font-medium text-white"> Username </label>
+          <input
+            v-model="form.username"
+            id="username"
+            type="text"
+            required
+            class="w-full px-3 py-2 rounded-md border border-gray-800 bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-[#6D28D9] focus:border-transparent"
+            :class="{ 'border-red-500': errors.username }"
+          />
+          <p v-if="errors.username" class="text-sm text-red-500">{{ errors.username }}</p>
+        </div>
+
+        <div class="space-y-2">
+          <label for="email" class="text-sm font-medium text-white"> Email </label>
+          <input
+            v-model="form.email"
+            id="email"
+            type="email"
+            required
+            class="w-full px-3 py-2 rounded-md border border-gray-800 bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-[#6D28D9] focus:border-transparent"
+            :class="{ 'border-red-500': errors.email }"
+          />
+          <p v-if="errors.email" class="text-sm text-red-500">{{ errors.email }}</p>
+        </div>
+
+        <div class="space-y-2">
+          <label for="password" class="text-sm font-medium text-white"> Password </label>
+          <input
+            v-model="form.password"
+            id="password"
+            type="password"
+            required
+            class="w-full px-3 py-2 rounded-md border border-gray-800 bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-[#6D28D9] focus:border-transparent"
+            :class="{ 'border-red-500': errors.password }"
+          />
+          <p v-if="errors.password" class="text-sm text-red-500">{{ errors.password }}</p>
+        </div>
+
+        <button
+          type="submit"
+          class="w-full px-4 py-2 bg-[#6D28D9] text-white rounded-md hover:bg-[#5b21b6] focus:outline-none focus:ring-2 focus:ring-[#6D28D9] focus:ring-offset-2 focus:ring-offset-[#030712] transition-colors"
+          :disabled="isSubmitting"
+        >
+          {{ isSubmitting ? 'Creating Account...' : 'Create Account' }}
+        </button>
+      </form>
+    </div>
+  </div>
+</template>
