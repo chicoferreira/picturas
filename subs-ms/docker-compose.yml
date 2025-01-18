@@ -20,6 +20,8 @@ services:
       PG_USER: ${PG_USER}
       PG_PASSWORD: ${PG_PASSWORD}
       PG_PORT: ${PG_PORT}
+    volumes:
+      - ../keys:/keys
     ports:
       - '8080:8000'
     depends_on:

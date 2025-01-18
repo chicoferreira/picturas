@@ -3,6 +3,7 @@ import os
 import httpx
 import logging
 import json
+import jwt
 from datetime import datetime, timedelta
 from uuid import UUID
 
@@ -19,6 +20,10 @@ load_dotenv()
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
 USERS_ENDPOINT = os.getenv('USERS_ENDPOINT')
 
+with open("/keys/access.key.pub", "r") as file:
+    pub_key = file.read().strip()
+
+# POST to the users endpoint with premium role
 async def notif_users(sub: Subscription):
     user_id = sub.user_id
     end_date = sub.end_date.isoformat()
@@ -41,16 +46,30 @@ async def notif_users(sub: Subscription):
     except Exception as e:
         logging.error(f'Error notifying users service: {e}')
 
-@router.post('/users')
-async def check(req: Request):
-    data = await req.json()
-    print(data)
-
+# Create a stripe checkout session
 @router.post('/create-checkout-session')
 async def create_checkout_session(req: Request, db: Session = Depends(get_db)):
     try:
-        data = await req.json()
-        user_id = data['user_id']
+        # Get user_id from access token
+        data = await req.cookies()
+        access_token = data['access_token']
+
+        if not access_token:
+            return JSONResponse(
+                status_code=400,
+                content={'error': 'Unauthorized'}
+            )
+        
+        access_token_decoded = jwt.decode(access_token, pub_key, algorithms='RS256')
+
+        now = datetime.utcnow()
+        if now > datetime.fromtimestamp(access_token_decoded['exp']):
+            return JSONResponse(
+                status_code=400,
+                content={'error': 'Unauthorized'}
+            )
+
+        user_id = access_token_decoded['sub']
 
         if not user_id:
             return JSONResponse(
@@ -70,10 +89,11 @@ async def create_checkout_session(req: Request, db: Session = Depends(get_db)):
             cancel_url='https://example.com/cancel',
         )
 
+        # Create a new subscription record and insert it into the db
         sub = Subscription(
             session_id = session.id,
             user_id = user_id,
-            price = 10,
+            price = '9.99',
             stripe_subscription_id = session.subscription,
             start_date = datetime.utcnow(),
             end_date = datetime.utcnow() + timedelta(days=30),
@@ -93,8 +113,9 @@ async def create_checkout_session(req: Request, db: Session = Depends(get_db)):
             content={'error': str(e)}
         )
 
+# Handle stripe webhook events
 @router.post('/webhook')
-async def handle_webhook(req: Request, db: Session = Depends(get_db)):
+async def handle_webhook(req: Request, res: Response, db: Session = Depends(get_db)):
     raw_payload = await req.body()
     sig_header = req.headers.get('Stripe-Signature')
 
@@ -119,6 +140,7 @@ async def handle_webhook(req: Request, db: Session = Depends(get_db)):
                 sub.status = 'active'
                 db.commit()
                 await notif_users(sub)
+                res.set_cookie(key='access_token', value='', age=-1)
         
         return JSONResponse(
             status_code=200,
@@ -137,10 +159,5 @@ async def handle_webhook(req: Request, db: Session = Depends(get_db)):
             content={'error': str(e)}
         )
 
-
-@router.get('/subscriptions')
-async def get_subscriptions(db: Session = Depends(get_db)):
-    subs = db.query(Subscription).all()
-    return subs
 
 
