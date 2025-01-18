@@ -10,6 +10,10 @@ Content-Type: application/json
     client.global.set("project", response.body.id);
 %}
 
+### Gets my projects
+GET http://localhost/api/v1/projects
+Content-Type: application/json
+
 ### Gets a project
 GET http://localhost/api/v1/projects/{{project}}
 Content-Type: application/json

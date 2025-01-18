@@ -31,6 +31,21 @@ pub async fn create_project(owner: Uuid, name: String, state: AppState) -> Resul
     Ok(project)
 }
 
+pub async fn get_projects(user: Uuid, state: AppState) -> Result<Vec<Project>> {
+    info!("Fetching projects for user with ID: {}", user);
+    let projects = sqlx::query_as!(
+        Project,
+        "SELECT id, name, user_id, created_at, updated_at FROM projects WHERE user_id = $1",
+        user
+    )
+    .fetch_all(&state.db_pool)
+    .await
+    .map_err(|_| AppError::EntityNotFound)?;
+
+    info!("Fetched projects for user with ID: {}", user);
+    Ok(projects)
+}
+
 pub async fn get_project(project_id: Uuid, state: AppState) -> Result<Project> {
     info!("Fetching project with ID: {}", project_id);
     let project = sqlx::query_as!(
