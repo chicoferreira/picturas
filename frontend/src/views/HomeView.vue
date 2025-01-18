@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router';
+import { useAuth } from '@/lib/auth';
 
-const router = useRouter();
+const { registerUser, loginUser } = useAuth();
 
-const isLogin = ref(false)
+const isLogin = ref(false);
 
 const username = ref('');
 const email = ref('');
@@ -14,66 +14,15 @@ const toggleForm = () => {
   isLogin.value = !isLogin.value;
 };
 
-const registerUser = async () => {
-
-  try {
-    const response = await fetch('http://localhost:80/api/v1/users/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: username.value,
-        email: email.value,
-        password: password.value,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      alert(`Erro: ${error.message}`);
-      return;
-    }
-
-    alert('Conta registada com sucesso!');
-    toggleForm();
-
-    router.push('/projects');
-  } catch (error) {
-    console.error('Erro ao registar:', error);
-    alert('Erro ao registar. Tente novamente.');
-  }
+const handleRegister = async () => {
+  await registerUser(username.value, email.value, password.value);
+  toggleForm();
 };
 
-const loginUser = async () => {
-  try {
-    const response = await fetch('http://localhost:80/api/v1/users/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: email.value,
-        password: password.value,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      alert(`Erro: ${error.message}`);
-      return;
-    }
-
-    alert('Login efetuado com sucesso!');
-    toggleForm();
-
-    router.push('/projects');
-  } catch (error) {
-    console.error('Erro ao efetuar login:', error);
-    alert('Erro ao efetuar login. Tente novamente.');
-  }
+const handleLogin = async () => {
+  await loginUser(email.value, password.value);
+  toggleForm();
 };
-
 </script>
 
 <template>
@@ -130,7 +79,7 @@ const loginUser = async () => {
 
         <!-- Formulário de Registo ou Login -->
         <div v-if="!isLogin">
-          <form @submit.prevent="registerUser" class="space-y-4">
+          <form @submit.prevent="handleRegister" class="space-y-4">
             <input type="text" name="username" placeholder="Usuário" v-model="username" class="w-full px-4 py-2 border rounded-lg text-black" required />
             <input type="email" name="email" placeholder="Email" v-model="email" class="w-full px-4 py-2 border rounded-lg text-black" required />
             <input type="password" name="password" placeholder="Senha" v-model="password" class="w-full px-4 py-2 border rounded-lg text-black" required />
@@ -147,7 +96,7 @@ const loginUser = async () => {
         </div>
 
         <div v-else>
-          <form @submit.prevent="loginUser" class="space-y-4">
+          <form @submit.prevent="handleLogin" class="space-y-4">
             <input type="email" name="email" placeholder="Email" v-model="email" class="w-full px-4 py-2 border rounded-lg text-black" required />
             <input type="password" name="password" placeholder="Senha" v-model="password" class="w-full px-4 py-2 border rounded-lg text-black" required />
             <button type="submit" class="w-full px-8 py-3 text-center text-white bg-black hover:bg-gray-600 rounded-lg">
