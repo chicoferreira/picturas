@@ -70,3 +70,14 @@ pub async fn delete_project(project_id: Uuid, state: AppState) -> Result<()> {
     info!("Deleted project with ID: {}", project_id);
     Ok(())
 }
+
+pub async fn can_modify(project_id: Uuid, user_id: Uuid, state: &AppState) -> Result<bool> {
+    Ok(sqlx::query!(
+        "SELECT id FROM projects WHERE id = $1 AND user_id = $2",
+        project_id,
+        user_id
+    )
+    .fetch_optional(&state.db_pool)
+    .await?
+    .is_some())
+}

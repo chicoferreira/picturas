@@ -1,9 +1,11 @@
 use crate::error::{AppError, Result};
 use crate::image::controller;
 use crate::image::model::Image;
-use crate::AppState;
+use crate::user::AccessTokenClaims;
+use crate::{project, AppState};
 use axum::extract::{DefaultBodyLimit, Multipart, Path, State};
-use axum::http::{header, HeaderName, HeaderValue};
+use axum::http::{header, HeaderValue, StatusCode};
+use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{debug_handler, Json, Router};
 use serde::{Deserialize, Serialize};
@@ -23,11 +25,17 @@ pub fn router(state: AppState) -> Router {
     Router::new().nest("/projects/{project_id}", images_router)
 }
 
+#[debug_handler]
 async fn create_image(
     Path(project_id): Path<Uuid>,
+    user: AccessTokenClaims,
     State(state): State<AppState>,
     mut multipart: Multipart,
-) -> Result<Json<Vec<Image>>> {
+) -> Result<impl IntoResponse> {
+    if !project::controller::can_modify(project_id, user.sub, &state).await? {
+        return Ok(StatusCode::FORBIDDEN.into_response());
+    }
+
     let mut result = vec![];
     while let Some(field) = multipart.next_field().await? {
         let file_name = field
@@ -48,7 +56,7 @@ async fn create_image(
         let image = controller::create_image(project_id, file_name, data, &state).await?;
         result.push(image);
     }
-    Ok(Json(result))
+    Ok(Json(result).into_response())
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -61,8 +69,13 @@ struct ImageWithUrl {
 #[debug_handler]
 async fn get_images(
     Path(project_id): Path<Uuid>,
+    user: AccessTokenClaims,
     State(state): State<AppState>,
-) -> Result<Json<Vec<ImageWithUrl>>> {
+) -> Result<impl IntoResponse> {
+    if !project::controller::can_modify(project_id, user.sub, &state).await? {
+        return Ok(StatusCode::FORBIDDEN.into_response());
+    }
+
     let images = controller::get_original_images(project_id, &state)
         .await?
         .into_iter()
@@ -73,29 +86,40 @@ async fn get_images(
             );
             ImageWithUrl { image, url }
         })
-        .collect();
+        .collect::<Vec<_>>();
 
-    Ok(Json(images))
+    Ok(Json(images).into_response())
 }
 
 #[debug_handler]
 async fn download_image(
     Path((project_id, image_id)): Path<(Uuid, Uuid)>,
+    user: AccessTokenClaims,
     State(state): State<AppState>,
-) -> Result<([(HeaderName, HeaderValue); 1], Vec<u8>)> {
+) -> Result<impl IntoResponse> {
+    if !project::controller::can_modify(project_id, user.sub, &state).await? {
+        return Ok(StatusCode::FORBIDDEN.into_response());
+    }
+
     let image_bytes = controller::get_image(project_id, image_id, &state).await?;
     Ok((
         [(header::CONTENT_TYPE, HeaderValue::from_static("image/png"))],
         image_bytes,
-    ))
+    )
+        .into_response())
 }
 
 #[debug_handler]
 async fn delete_image(
     Path((project_id, image_id)): Path<(Uuid, Uuid)>,
+    user: AccessTokenClaims,
     State(state): State<AppState>,
-) -> Result<Json<Image>> {
+) -> Result<impl IntoResponse> {
+    if !project::controller::can_modify(project_id, user.sub, &state).await? {
+        return Ok(StatusCode::FORBIDDEN.into_response());
+    }
+
     let image = controller::delete_image(image_id, project_id, &state).await?;
     let image = image.ok_or(AppError::EntityNotFound)?;
-    Ok(Json(image))
+    Ok(Json(image).into_response())
 }

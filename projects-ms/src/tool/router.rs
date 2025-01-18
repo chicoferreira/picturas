@@ -1,14 +1,16 @@
 use crate::error::Result;
+use crate::project::controller;
 use crate::tool::controller::ImageVersionWithUrl;
-use crate::tool::model::{RequestedTool, Tool};
+use crate::tool::model::RequestedTool;
 use crate::tool::websocket;
 use crate::user::AccessTokenClaims;
 use crate::{tool, AppState};
 use axum::extract::{Path, State};
-use axum::http::{header, HeaderName, HeaderValue};
+use axum::http::{header, HeaderValue, StatusCode};
+use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{debug_handler, Json, Router};
-use serde_json::{json, Value};
+use serde_json::json;
 use uuid::Uuid;
 
 pub fn router(state: AppState) -> Router {
@@ -33,33 +35,51 @@ pub fn router(state: AppState) -> Router {
 #[debug_handler]
 async fn get_tools(
     Path(project_id): Path<Uuid>,
+    user: AccessTokenClaims,
     State(state): State<AppState>,
-) -> Result<Json<Vec<Tool>>> {
-    tool::controller::get_applied_tools(project_id, &state)
+) -> Result<impl IntoResponse> {
+    if !controller::can_modify(project_id, user.sub, &state).await? {
+        return Ok(StatusCode::FORBIDDEN.into_response());
+    }
+
+    Ok(tool::controller::get_applied_tools(project_id, &state)
         .await
         .map(Json)
+        .into_response())
 }
 
 #[debug_handler]
 async fn add_tool(
     Path(project_id): Path<Uuid>,
+    user: AccessTokenClaims,
     State(state): State<AppState>,
     Json(tool): Json<RequestedTool>,
-) -> Result<Json<Tool>> {
-    tool::controller::add_tool(project_id, tool, &state)
+) -> Result<impl IntoResponse> {
+    if !controller::can_modify(project_id, user.sub, &state).await? {
+        return Ok(StatusCode::FORBIDDEN.into_response());
+    }
+
+    Ok(tool::controller::add_tool(project_id, tool, &state)
         .await
         .map(Json)
+        .into_response())
 }
 
 #[debug_handler]
 async fn put_tools(
     Path(project_id): Path<Uuid>,
+    user: AccessTokenClaims,
     State(state): State<AppState>,
     Json(tools): Json<Vec<RequestedTool>>,
-) -> Result<Json<Vec<Tool>>> {
-    tool::controller::update_tools(project_id, tools, &state)
+) -> Result<impl IntoResponse> {
+    if !controller::can_modify(project_id, user.sub, &state).await? {
+        return Ok(StatusCode::FORBIDDEN.into_response());
+    }
+
+    Ok(tool::controller::update_tools(project_id, tools, &state)
         .await
         .map(Json)
+        .into_response())
 }
 
 #[debug_handler]
@@ -67,36 +87,53 @@ async fn apply_tools(
     Path(project_id): Path<Uuid>,
     user: AccessTokenClaims,
     State(state): State<AppState>,
-) -> Result<Json<Value>> {
+) -> Result<impl IntoResponse> {
+    if !controller::can_modify(project_id, user.sub, &state).await? {
+        return Ok(StatusCode::FORBIDDEN.into_response());
+    }
+
     tool::controller::apply_added_tools(project_id, user.sub, &state).await?;
     Ok(Json(json!({
         "message": "Hook to websocket to get realtime results",
-    })))
+    }))
+    .into_response())
 }
 
 #[debug_handler]
 async fn get_image_versions(
     Path(project_id): Path<Uuid>,
+    user: AccessTokenClaims,
     State(state): State<AppState>,
-) -> Result<Json<Vec<ImageVersionWithUrl>>> {
-    let images = tool::controller::get_image_versions(project_id, &state)
+) -> Result<impl IntoResponse> {
+    if !controller::can_modify(project_id, user.sub, &state).await? {
+        return Ok(StatusCode::FORBIDDEN.into_response());
+    }
+
+    let images: Vec<_> = tool::controller::get_image_versions(project_id, &state)
         .await?
         .into_iter()
         .map(|image_version| ImageVersionWithUrl::from_image_version(image_version, &state))
         .collect();
 
-    Ok(Json(images))
+    Ok(Json(images).into_response())
 }
 
+#[debug_handler]
 async fn download_image_version(
     Path((project_id, image_version_id)): Path<(Uuid, Uuid)>,
+    user: AccessTokenClaims,
     State(state): State<AppState>,
-) -> Result<([(HeaderName, HeaderValue); 1], Vec<u8>)> {
+) -> Result<impl IntoResponse> {
+    if !controller::can_modify(project_id, user.sub, &state).await? {
+        return Ok(StatusCode::FORBIDDEN.into_response());
+    }
+
     let image_bytes =
         tool::controller::load_image_version(project_id, image_version_id, &state).await?;
 
     Ok((
         [(header::CONTENT_TYPE, HeaderValue::from_static("image/png"))],
         image_bytes,
-    ))
+    )
+        .into_response())
 }
