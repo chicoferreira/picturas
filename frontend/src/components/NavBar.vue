@@ -5,20 +5,40 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
 } from '@/components/ui/navigation-menu'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-// Gerar links dinamicamente com base nas rotas do ficheiro de router
+// Estado de autenticação 
+const isLoggedIn = ref(false)
+
+/*
+const toggleForm = () => {
+  isLoggedIn.value = !isLoggedIn.value
+}
+*/
+
 const links = router.options.routes.map((route) => ({
   name: route.name,
   href: route.path,
 }))
 
-// Opcional: Filtrar rotas específicas se não quiseres todas no menu
-const menuLinks = links.filter(
-  (link) => link.name !== 'TestePage' && link.name !== 'Register' && link.name !== 'Login',
-)
+// Filtrar links
+const menuLinks = links.filter((link) => {
+  if (!isLoggedIn.value) {
+    // Excluir rotas para utilizadores não autenticados
+    return (
+      link.name !== 'Settings' &&
+      link.name !== 'TestePage' &&
+      link.name !== 'Register' &&
+      link.name !== 'Login'
+    )
+  }
+  // Excluir rotas para todos os utilizadores
+  return link.name !== 'TestePage' && link.name !== 'Register' && link.name !== 'Login'
+})
+
 </script>
 
 <template>
@@ -36,7 +56,7 @@ const menuLinks = links.filter(
 <style scoped>
 .navbar-container {
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
   background-color: #030712;
   padding: 5px;
 }
