@@ -17,5 +17,13 @@ http://localhost {
         reverse_proxy http://projects-ms:8000
     }
 
+    handle /api/v1/projects/*/ws {
+        reverse_proxy http://projects-ms:8000 {
+            transport http {
+                versions h1 h2
+            }
+        }
+    }
+
     respond "Not found" 404
 }
