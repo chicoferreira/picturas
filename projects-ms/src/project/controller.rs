@@ -1,18 +1,17 @@
 use crate::error::{AppError, Result};
 use crate::project::model::Project;
-use crate::user::User;
 use crate::AppState;
 use chrono::Utc;
 use tracing::info;
 use uuid::Uuid;
 
-pub async fn create_project(owner: User, name: String, state: AppState) -> Result<Project> {
+pub async fn create_project(owner: Uuid, name: String, state: AppState) -> Result<Project> {
     info!("Creating project with name: {}", name);
     let now = Utc::now();
     let project = Project {
         id: Uuid::new_v4(),
         name,
-        user_id: owner.uuid,
+        user_id: owner,
         created_at: now,
         updated_at: now,
     };

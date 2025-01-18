@@ -46,9 +46,10 @@ services:
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_USER=guest
       - RABBITMQ_PASSWORD=guest
-      - RUST_LOG=INFO
-    ports:
-      - ${BIND_PORT}:${BIND_PORT}
+      - RUST_LOG=DEBUG
+      - ACCESS_TOKEN_PUBLIC_KEY=/run/secrets/access_token_public_key
+    secrets:
+      - access_token_public_key
     depends_on:
       rabbitmq:
         condition: service_healthy

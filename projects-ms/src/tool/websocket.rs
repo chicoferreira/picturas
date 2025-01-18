@@ -1,4 +1,4 @@
-use crate::user::User;
+use crate::user::AccessTokenClaims;
 use crate::AppState;
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{Path, State, WebSocketUpgrade};
@@ -19,22 +19,27 @@ pub fn router(state: AppState) -> Router {
 #[debug_handler]
 async fn ws_handler(
     ws: WebSocketUpgrade,
-    user: User,
+    user: AccessTokenClaims,
     State(state): State<AppState>,
     Path(project_uuid): Path<Uuid>,
 ) -> impl IntoResponse {
     ws.on_upgrade(move |socket| handle_socket(socket, project_uuid, user, state))
 }
 
-async fn handle_socket(mut socket: WebSocket, project_uuid: Uuid, user: User, state: AppState) {
-    let span = tracing::info_span!("ws_handler", ?project_uuid, user_uuid = ?user.uuid);
+async fn handle_socket(
+    mut socket: WebSocket,
+    project_uuid: Uuid,
+    user: AccessTokenClaims,
+    state: AppState,
+) {
+    let span = tracing::info_span!("ws_handler", ?project_uuid, user_uuid = ?user.sub);
     let _guard = span.enter();
 
     info!("WS User connected");
 
     let (sender, mut receiver) = tokio::sync::mpsc::channel(10);
 
-    register_ws_client(&state, project_uuid, user.uuid, sender).await;
+    register_ws_client(&state, project_uuid, user.sub, sender).await;
 
     while let Some(message) = receiver.recv().await {
         if let Err(err) = socket.send(message).await {
@@ -43,7 +48,7 @@ async fn handle_socket(mut socket: WebSocket, project_uuid: Uuid, user: User, st
         }
     }
 
-    unregister_ws_client(&state, project_uuid, user.uuid).await;
+    unregister_ws_client(&state, project_uuid, user.sub).await;
     info!("WS client disconnected");
 }
 

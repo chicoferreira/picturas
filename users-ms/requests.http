@@ -1,5 +1,5 @@
 ### Register user
-POST http://localhost:8010/api/v1/users/register
+POST http://localhost/api/v1/users/register
 Content-Type: application/json
 
 {
@@ -9,7 +9,7 @@ Content-Type: application/json
 }
 
 ### Login user
-POST http://localhost:8010/api/v1/users/login
+POST http://localhost/api/v1/users/login
 Content-Type: application/json
 
 {
@@ -18,10 +18,10 @@ Content-Type: application/json
 }
 
 ### Refresh token
-POST http://localhost:8010/api/v1/users/refresh
+POST http://localhost/api/v1/users/refresh
 
 ### Get user
-GET http://localhost:8010/api/v1/users/me
+GET http://localhost/api/v1/users/me
 
 ### Logout user
-POST http://localhost:8010/api/v1/users/logout
+POST http://localhost/api/v1/users/logout

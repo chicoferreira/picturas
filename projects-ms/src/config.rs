@@ -1,10 +1,11 @@
 use crate::tool::amqp::rabbit_controller::ToolQueue;
 use crate::AppState;
 use clap::Parser;
+use jsonwebtoken::DecodingKey;
 use std::path::PathBuf;
 use uuid::Uuid;
 
-#[derive(Debug, Parser)]
+#[derive(Parser)]
 pub struct Config {
     #[arg(long, env)]
     pub pg_host: String,
@@ -38,6 +39,8 @@ pub struct Config {
     pub picturas_public_url: String,
     #[arg(long, env, use_value_delimiter = true, value_parser = parse_tool_queue)]
     pub picturas_available_tools: Vec<ToolQueue>,
+    #[arg(long, env, value_parser = load_decoding_key_from_file)]
+    pub access_token_public_key: DecodingKey,
 }
 
 fn parse_tool_queue(src: &str) -> Result<ToolQueue, String> {
@@ -46,6 +49,10 @@ fn parse_tool_queue(src: &str) -> Result<ToolQueue, String> {
         name: name.to_string(),
         routing_key: routing_key.to_string(),
     })
+}
+
+fn load_decoding_key_from_file(path: &str) -> Result<DecodingKey, std::io::Error> {
+    Ok(DecodingKey::from_rsa_pem(&std::fs::read(path)?).expect("Failed to read RSA key"))
 }
 
 pub fn generate_image_version_folder_uri(project_uuid: Uuid, state: &AppState) -> PathBuf {

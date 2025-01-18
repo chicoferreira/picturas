@@ -2,7 +2,7 @@ use crate::error::Result;
 use crate::tool::controller::ImageVersionWithUrl;
 use crate::tool::model::{RequestedTool, Tool};
 use crate::tool::websocket;
-use crate::user::User;
+use crate::user::AccessTokenClaims;
 use crate::{tool, AppState};
 use axum::extract::{Path, State};
 use axum::http::{header, HeaderName, HeaderValue};
@@ -65,10 +65,10 @@ async fn put_tools(
 #[debug_handler]
 async fn apply_tools(
     Path(project_id): Path<Uuid>,
-    user: User,
+    user: AccessTokenClaims,
     State(state): State<AppState>,
 ) -> Result<Json<Value>> {
-    tool::controller::apply_added_tools(project_id, user.uuid, &state).await?;
+    tool::controller::apply_added_tools(project_id, user.sub, &state).await?;
     Ok(Json(json!({
         "message": "Hook to websocket to get realtime results",
     })))

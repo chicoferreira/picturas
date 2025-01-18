@@ -1,0 +1,19 @@
+services:
+  caddy:
+    image: caddy
+    restart: always
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - caddy-config:/config
+      - caddy-data:/data
+      - ./Caddyfile:/etc/caddy/Caddyfile
+    networks:
+      - picturas-network
+    depends_on:
+      - projects-ms
+      - users-ms
+volumes:
+  caddy-config:
+  caddy-data:

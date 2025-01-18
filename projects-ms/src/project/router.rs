@@ -1,7 +1,7 @@
 use crate::error::Result;
 use crate::project::controller;
 use crate::project::model::Project;
-use crate::user::User;
+use crate::user::AccessTokenClaims;
 use crate::AppState;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -28,10 +28,10 @@ struct CreateProjectRequest {
 #[debug_handler]
 async fn create_project(
     State(state): State<AppState>,
-    user: User,
+    user: AccessTokenClaims,
     Json(request): Json<CreateProjectRequest>,
 ) -> Result<(StatusCode, Json<Project>)> {
-    let project = controller::create_project(user, request.name, state).await?;
+    let project = controller::create_project(user.sub, request.name, state).await?;
     Ok((StatusCode::CREATED, Json(project)))
 }
 
