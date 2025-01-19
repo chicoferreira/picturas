@@ -72,20 +72,18 @@ const handleLogin = async () => {
     <div class="lg:p-8">
       <div class="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
         <div class="flex flex-col space-y-2 text-center">
-          <h1 class="text-3xl font-semibold tracking-tight">Bem-vindo ao PictuRAS</h1>
+          <h1 class="text-3xl font-semibold tracking-tight">Welcome to PictuRAS</h1>
           <p class="text-sm text-muted-foreground">
-            A melhor ferramenta de edição de imagens que você pode usar para criar, editar e
-            transformar suas fotos.
+            The best image editing tool you can use to create, edit and transform your photos.
           </p>
         </div>
 
-        <!-- Formulário de Registo ou Login -->
         <div v-if="!isLogin">
           <form @submit.prevent="handleRegister" class="space-y-4">
             <input
               type="text"
               name="username"
-              placeholder="Usuário"
+              placeholder="Username"
               v-model="username"
               class="w-full px-4 py-2 border rounded-lg text-black"
               required
@@ -101,7 +99,7 @@ const handleLogin = async () => {
             <input
               type="password"
               name="password"
-              placeholder="Senha"
+              placeholder="Password"
               v-model="password"
               class="w-full px-4 py-2 border rounded-lg text-black"
               required
@@ -110,12 +108,12 @@ const handleLogin = async () => {
               type="submit"
               class="w-full px-8 py-3 text-center text-white bg-black hover:bg-gray-600 rounded-lg"
             >
-              Registar
+              Register
             </button>
           </form>
           <div class="text-center mt-4">
             <p class="text-sm text-muted-foreground">
-              Já tem uma conta?
+              Already have an account?
               <a @click="toggleForm" href="#" class="text-blue-500 hover:underline">Login</a>
             </p>
           </div>
@@ -134,7 +132,7 @@ const handleLogin = async () => {
             <input
               type="password"
               name="password"
-              placeholder="Senha"
+              placeholder="Password"
               v-model="password"
               class="w-full px-4 py-2 border rounded-lg text-black"
               required
@@ -148,8 +146,8 @@ const handleLogin = async () => {
           </form>
           <div class="text-center mt-4">
             <p class="text-sm text-muted-foreground">
-              Não tem uma conta?
-              <a @click="toggleForm" href="#" class="text-blue-500 hover:underline">Registe-se</a>
+              Don't have an account?
+              <a @click="toggleForm" href="#" class="text-blue-500 hover:underline">Register</a>
             </p>
           </div>
         </div>
