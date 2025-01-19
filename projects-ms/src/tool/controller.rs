@@ -1,8 +1,9 @@
 use crate::error::Result;
+use crate::image::model::Image;
 use crate::tool::model::{ImageVersion, RequestedTool, Tool};
 use crate::tool::queue;
 use crate::tool::queue::QueuedImageApplyTool;
-use crate::{config, image, AppState};
+use crate::{config, AppState};
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::io::Write;
@@ -144,21 +145,19 @@ pub async fn update_tools(
 pub async fn apply_added_tools(
     project_uuid: Uuid,
     user_uuid: Uuid,
+    images: &[Image],
     state: &AppState,
 ) -> Result<()> {
     delete_image_versions(project_uuid, state).await?;
 
-    let (images, tools) = tokio::join!(
-        image::controller::get_original_images(project_uuid, state),
-        get_applied_tools(project_uuid, state)
-    );
+    let tools = get_applied_tools(project_uuid, state).await;
 
     let requested_tools: VecDeque<(Uuid, RequestedTool)> = tools?
         .into_iter()
         .filter_map(|tool| Some((tool.id, tool.try_into().ok()?)))
         .collect();
 
-    for image in images? {
+    for image in images {
         let image_input_uri = image.get_uri(state);
 
         let queued_image_apply_tool = QueuedImageApplyTool::new_generate_output_uri(
