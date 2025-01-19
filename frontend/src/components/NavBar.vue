@@ -11,13 +11,13 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 // Estado de autenticação 
-const isLoggedIn = ref(false)
+var isLoggedIn = ref(false)
 
-/*
+
 const toggleForm = () => {
   isLoggedIn.value = !isLoggedIn.value
 }
-*/
+
 
 const links = router.options.routes.map((route) => ({
   name: route.name,
@@ -29,28 +29,38 @@ const menuLinks = links.filter((link) => {
   if (!isLoggedIn.value) {
     // Excluir rotas para utilizadores não autenticados
     return (
+      link.name !== 'home' &&
       link.name !== 'Settings' &&
       link.name !== 'TestePage' &&
       link.name !== 'Register' &&
-      link.name !== 'Login'
+      link.name !== 'Login' && 
+      link.name !== 'Projects'
     )
   }
   // Excluir rotas para todos os utilizadores
-  return link.name !== 'TestePage' && link.name !== 'Register' && link.name !== 'Login'
+  return link.name !== 'TestePage' && link.name !== 'Register' && link.name !== 'Login' && link.name !== 'home'
 })
 
 </script>
 
 <template>
-  <div class="navbar-container">
-    <NavigationMenu class="navigation-menu">
-      <NavigationMenuList>
-        <NavigationMenuItem v-for="link in menuLinks" :key="link.name">
-          <NavigationMenuLink :href="link.href">{{ link.name }}</NavigationMenuLink>
-        </NavigationMenuItem>
-      </NavigationMenuList>
+  <div class="navbar-container flex justify-between items-center">
+    <a class="mr-auto ml-2" href="/">
+        <h1
+            class="text-2xl font-bold bg-gradient-to-r from-[#6D28D9] to-white bg-clip-text text-transparent tracking-tight"
+        >
+            PICTURAS
+        </h1>
+      </a>
+    <NavigationMenu class="navigation-menu flex-1 items-center">
+        <NavigationMenuList class="flex items-center">
+            <NavigationMenuItem v-for="link in menuLinks" :key="link.name">
+                <NavigationMenuLink :href="link.href">{{ link.name }}</NavigationMenuLink>
+            </NavigationMenuItem>
+        </NavigationMenuList>
     </NavigationMenu>
-  </div>
+</div>
+
 </template>
 
 <style scoped>
