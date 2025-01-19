@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth'
 
+
 const { loginUser } = useAuth()
 
 interface FormData {
@@ -76,7 +77,7 @@ const animateBackground = () => {
       y: Math.random() * canvas.height,
       size: Math.random() * 5 + 1,
       speedX: Math.random() * 3 - 1.5,
-      speedY: Math.random() * 3 - 1.5,
+      speedY: Math.random() * 3 - 1.5
     })
   }
 
@@ -121,6 +122,7 @@ onUnmounted(() => {
   <div class="min-h-screen flex flex-col items-center justify-center bg-[#030712] p-6 relative">
     <canvas id="bgCanvas" class="absolute inset-0 z-0"></canvas>
     <div class="w-full max-w-md space-y-8 relative z-10">
+    
       <div class="text-center">
         <h1
           class="text-5xl font-bold bg-gradient-to-r from-[#6D28D9] to-white bg-clip-text text-transparent tracking-tight"
@@ -132,28 +134,14 @@ onUnmounted(() => {
       <Card class="border-0 bg-[#030712] bg-opacity-80 backdrop-blur-sm">
         <CardHeader>
           <CardTitle class="text-3xl font-semibold tracking-tight text-white text-center">
-            Login
+            Change your password
           </CardTitle>
           <CardDescription class="text-[#969696] text-center">
-            Enter your email and password to login to your account
+           Enter a new password
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form @submit.prevent="handleSubmit" class="space-y-4">
-            <div class="space-y-2">
-              <Label for="email" class="text-white">Email</Label>
-              <Input
-                v-model="form.email"
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                required
-                :class="{ 'border-red-500': errors.email }"
-                class="bg-transparent text-white border-gray-800 rounded-2xl"
-              />
-              <p v-if="errors.email" class="text-sm text-red-500">{{ errors.email }}</p>
-            </div>
-
             <div class="space-y-2">
               <Label for="password" class="text-white">Password</Label>
               <Input
@@ -175,8 +163,8 @@ onUnmounted(() => {
               {{ isSubmitting ? 'Logging in...' : 'Login' }}
             </Button>
             <p class="text-sm text-[#969696]">
-              <router-link to="/reset-password" class="text-[#969696] hover:underline">
-                Forgot your password?
+              <router-link to="/login" class="text-[#969696] hover:underline">
+                Already have an account??
               </router-link>
             </p>
           </form>
@@ -185,3 +173,5 @@ onUnmounted(() => {
     </div>
   </div>
 </template>
+
+

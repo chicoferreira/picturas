@@ -10,7 +10,7 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-// Estado de autenticação 
+// Estado de autenticação
 const isLoggedIn = ref(false)
 
 /*
@@ -32,13 +32,18 @@ const menuLinks = links.filter((link) => {
       link.name !== 'Settings' &&
       link.name !== 'TestePage' &&
       link.name !== 'Register' &&
-      link.name !== 'Login'
+      link.name !== 'Login' &&
+      link.name !== 'ResetPassword'
     )
   }
   // Excluir rotas para todos os utilizadores
-  return link.name !== 'TestePage' && link.name !== 'Register' && link.name !== 'Login'
+  return (
+    link.name !== 'TestePage' &&
+    link.name !== 'Register' &&
+    link.name !== 'Login' &&
+    link.name !== 'ResetPassword'
+  )
 })
-
 </script>
 
 <template>
