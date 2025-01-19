@@ -6,10 +6,11 @@ use crate::tool::websocket;
 use crate::user::AccessTokenClaims;
 use crate::{tool, AppState};
 use axum::extract::{Path, State};
-use axum::http::{header, HeaderValue, StatusCode};
+use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{debug_handler, Json, Router};
+use axum::body::Bytes;
 use serde_json::json;
 use uuid::Uuid;
 
@@ -27,6 +28,10 @@ pub fn router(state: AppState) -> Router {
         .route(
             "/projects/{project_id}/tools/images/{image_version_id}",
             get(download_image_version),
+        )
+        .route(
+            "/projects/{project_id}/tools/imageszip",
+            get(download_image_versions_zip),
         )
         .with_state(state.clone())
         .merge(websocket::router(state))
@@ -136,4 +141,33 @@ async fn download_image_version(
         image_bytes,
     )
         .into_response())
+}
+
+#[derive(serde::Deserialize)]
+struct DownloadImageVersionsZipRequest {
+    tool_id: Uuid,
+}
+
+#[debug_handler]
+async fn download_image_versions_zip(
+    Path(project_id): Path<Uuid>,
+    user: AccessTokenClaims,
+    State(state): State<AppState>,
+    Json(body): Json<DownloadImageVersionsZipRequest>,
+) -> Result<impl IntoResponse> {
+    if !controller::can_modify(project_id, user.sub, &state).await? {
+        return Ok(StatusCode::FORBIDDEN.into_response());
+    }
+
+    let zip_bytes =
+        tool::controller::load_image_versions_zip(project_id, body.tool_id, &state).await?;
+    
+    let mut headers = HeaderMap::new();
+    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/zip"));
+    headers.insert(
+        header::CONTENT_DISPOSITION,
+        HeaderValue::from_static("attachment; filename=\"images.zip\""),
+    );
+
+    Ok((headers, Bytes::from(zip_bytes)).into_response())
 }

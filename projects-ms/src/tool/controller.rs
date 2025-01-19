@@ -5,6 +5,7 @@ use crate::tool::queue::QueuedImageApplyTool;
 use crate::{config, image, AppState};
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
+use std::io::Write;
 use tracing::{debug, info};
 use uuid::Uuid;
 
@@ -227,4 +228,37 @@ pub async fn load_image_version(
     let image_data = tokio::fs::read(image_path).await?;
 
     Ok(image_data)
+}
+
+pub async fn load_image_versions_zip(
+    project_id: Uuid,
+    tool_id: Uuid,
+    state: &AppState,
+) -> Result<Vec<u8>> {
+    let image_versions = sqlx::query_as!(
+        ImageVersion,
+        "SELECT id, original_image_id, project_id, tool_id, text_result, created_at FROM image_versions WHERE project_id = $1 AND tool_id = $2",
+        project_id,
+        tool_id
+    )
+        .fetch_all(&state.db_pool)
+        .await?;
+
+    let mut buffer = Vec::new();
+    let mut zip = zip::ZipWriter::new(std::io::Cursor::new(&mut buffer));
+
+    let options = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated);
+
+    for image_version in image_versions {
+        let image_path = image_version.get_uri(state);
+        let image_data: Vec<u8> = tokio::fs::read(image_path).await?;
+
+        zip.start_file(format!("{}.png", image_version.id), options)?;
+        zip.write_all(&image_data)?;
+    }
+
+    zip.finish()?;
+
+    Ok(buffer)
 }
