@@ -144,16 +144,6 @@ pub async fn update_tools(
     Ok(result)
 }
 
-async fn create_output_directory(project_uuid: Uuid, image_uuid: Uuid) -> Result<PathBuf> {
-    let output_dir = PathBuf::from(format!("/images/{}/output/{}", project_uuid, image_uuid));
-
-    if !output_dir.exists() {
-        fs::create_dir_all(&output_dir).await?;
-    }
-
-    Ok(output_dir)
-}
-
 pub async fn apply_added_tools(
     project_uuid: Uuid,
     user_uuid: Uuid,
@@ -171,7 +161,6 @@ pub async fn apply_added_tools(
 
     for image in images {
         let image_input_uri = image.get_uri(state);
-        create_output_directory(project_uuid, image.id).await?;
         let queued_image_apply_tool = QueuedImageApplyTool::new_generate_output_uri(
             project_uuid,
             user_uuid,
