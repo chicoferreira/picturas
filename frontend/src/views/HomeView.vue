@@ -128,12 +128,14 @@ const animateBackground = () => {
           <form @submit.prevent="handleLogin" class="space-y-4">
             <Input
               type="email"
+              class="rounded-2xl"
               placeholder="Email"
               v-model="email"
               required
             />
             <Input
               type="password"
+              class="rounded-2xl"
               placeholder="Password"
               v-model="password"
               required
