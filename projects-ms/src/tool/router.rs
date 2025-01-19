@@ -1,3 +1,4 @@
+use crate::error::AppError::Forbidden;
 use crate::error::Result;
 use crate::project::controller;
 use crate::tool::controller::ImageVersionWithUrl;
@@ -5,12 +6,12 @@ use crate::tool::model::RequestedTool;
 use crate::tool::websocket;
 use crate::user::AccessTokenClaims;
 use crate::{tool, AppState};
+use axum::body::Bytes;
 use axum::extract::{Path, State};
-use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
+use axum::http::{header, HeaderMap, HeaderValue};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{debug_handler, Json, Router};
-use axum::body::Bytes;
 use serde_json::json;
 use uuid::Uuid;
 
@@ -44,13 +45,12 @@ async fn get_tools(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse> {
     if !controller::can_modify(project_id, user.sub, &state).await? {
-        return Ok(StatusCode::FORBIDDEN.into_response());
+        return Err(Forbidden);
     }
 
     Ok(tool::controller::get_applied_tools(project_id, &state)
         .await
-        .map(Json)
-        .into_response())
+        .map(Json))
 }
 
 #[debug_handler]
@@ -61,13 +61,12 @@ async fn add_tool(
     Json(tool): Json<RequestedTool>,
 ) -> Result<impl IntoResponse> {
     if !controller::can_modify(project_id, user.sub, &state).await? {
-        return Ok(StatusCode::FORBIDDEN.into_response());
+        return Err(Forbidden);
     }
 
     Ok(tool::controller::add_tool(project_id, tool, &state)
         .await
-        .map(Json)
-        .into_response())
+        .map(Json))
 }
 
 #[debug_handler]
@@ -78,13 +77,12 @@ async fn put_tools(
     Json(tools): Json<Vec<RequestedTool>>,
 ) -> Result<impl IntoResponse> {
     if !controller::can_modify(project_id, user.sub, &state).await? {
-        return Ok(StatusCode::FORBIDDEN.into_response());
+        return Err(Forbidden);
     }
 
     Ok(tool::controller::update_tools(project_id, tools, &state)
         .await
-        .map(Json)
-        .into_response())
+        .map(Json))
 }
 
 #[debug_handler]
@@ -94,14 +92,13 @@ async fn apply_tools(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse> {
     if !controller::can_modify(project_id, user.sub, &state).await? {
-        return Ok(StatusCode::FORBIDDEN.into_response());
+        return Err(Forbidden);
     }
 
     tool::controller::apply_added_tools(project_id, user.sub, &state).await?;
     Ok(Json(json!({
         "message": "Hook to websocket to get realtime results",
-    }))
-    .into_response())
+    })))
 }
 
 #[debug_handler]
@@ -111,7 +108,7 @@ async fn get_image_versions(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse> {
     if !controller::can_modify(project_id, user.sub, &state).await? {
-        return Ok(StatusCode::FORBIDDEN.into_response());
+        return Err(Forbidden);
     }
 
     let images: Vec<_> = tool::controller::get_image_versions(project_id, &state)
@@ -120,7 +117,7 @@ async fn get_image_versions(
         .map(|image_version| ImageVersionWithUrl::from_image_version(image_version, &state))
         .collect();
 
-    Ok(Json(images).into_response())
+    Ok(Json(images))
 }
 
 #[debug_handler]
@@ -130,7 +127,7 @@ async fn download_image_version(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse> {
     if !controller::can_modify(project_id, user.sub, &state).await? {
-        return Ok(StatusCode::FORBIDDEN.into_response());
+        return Err(Forbidden);
     }
 
     let image_bytes =
@@ -139,8 +136,7 @@ async fn download_image_version(
     Ok((
         [(header::CONTENT_TYPE, HeaderValue::from_static("image/png"))],
         image_bytes,
-    )
-        .into_response())
+    ))
 }
 
 #[derive(serde::Deserialize)]
@@ -156,18 +152,21 @@ async fn download_image_versions_zip(
     Json(body): Json<DownloadImageVersionsZipRequest>,
 ) -> Result<impl IntoResponse> {
     if !controller::can_modify(project_id, user.sub, &state).await? {
-        return Ok(StatusCode::FORBIDDEN.into_response());
+        return Err(Forbidden);
     }
 
     let zip_bytes =
         tool::controller::load_image_versions_zip(project_id, body.tool_id, &state).await?;
-    
+
     let mut headers = HeaderMap::new();
-    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/zip"));
+    headers.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("application/zip"),
+    );
     headers.insert(
         header::CONTENT_DISPOSITION,
         HeaderValue::from_static("attachment; filename=\"images.zip\""),
     );
 
-    Ok((headers, Bytes::from(zip_bytes)).into_response())
+    Ok((headers, Bytes::from(zip_bytes)))
 }

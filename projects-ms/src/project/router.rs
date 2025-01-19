@@ -1,3 +1,4 @@
+use crate::error::AppError::Forbidden;
 use crate::error::Result;
 use crate::project::controller;
 use crate::project::model::Project;
@@ -53,9 +54,9 @@ async fn get_project(
 ) -> Result<impl IntoResponse> {
     let project = controller::get_project(project_id, state).await?;
     if project.user_id != user.sub {
-        return Ok(StatusCode::FORBIDDEN.into_response());
+        return Err(Forbidden);
     }
-    Ok(Json(project).into_response())
+    Ok(Json(project))
 }
 
 #[debug_handler]
@@ -66,8 +67,8 @@ async fn delete_project(
 ) -> Result<impl IntoResponse> {
     let project = controller::get_project(project_id, state.clone()).await?;
     if project.user_id != user.sub {
-        return Ok(StatusCode::FORBIDDEN.into_response());
+        return Err(Forbidden);
     }
     controller::delete_project(project_id, state).await?;
-    Ok(Json(project).into_response())
+    Ok(Json(project))
 }

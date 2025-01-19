@@ -25,6 +25,8 @@ pub enum AppError {
     NotAnImage(String),
     #[error("unauthorized")]
     Unauthorized,
+    #[error("forbidden")]
+    Forbidden,
     #[error(transparent)]
     JwtError(#[from] jsonwebtoken::errors::Error),
     #[error(transparent)]
@@ -50,6 +52,7 @@ impl IntoResponse for AppError {
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
             AppError::JwtError(_) => StatusCode::UNAUTHORIZED,
             AppError::ZipError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::Forbidden => StatusCode::FORBIDDEN,
         };
 
         let error = match self {
@@ -63,6 +66,7 @@ impl IntoResponse for AppError {
             AppError::Unauthorized => "Unauthorized".to_string(),
             AppError::JwtError(_) => "Invalid token".to_string(),
             AppError::ZipError(_) => "Internal zip error".to_string(),
+            AppError::Forbidden => "No permission".to_string(),
         };
 
         let body = ErrorBody { error };
