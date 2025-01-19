@@ -5,13 +5,13 @@ from .database import engine, Base
 
 app = FastAPI()
 
-app.include_router(stripe_service.router)
+app.include_router(stripe_service.router, prefix='/api/v1/subscriptions')
 
 @app.on_event('startup')
 async def startup():
     Base.metadata.create_all(bind=engine)
 
-@app.get('/')
+@app.get('/api/v1/subscriptions')
 async def main():
     return {'message': 'Microservice is running'}
           

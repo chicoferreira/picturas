@@ -1,16 +1,16 @@
 services:
-  db:
+  db-subs-ms:
     image: postgres:14.1-alpine
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: subscriptions
-    ports:
-      - '5433:5432'
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DATABASE}
+    networks:
+      - picturas-network
     volumes:
       - db:/var/lib/postgresql/data
-  app:
+  subs-ms:
     build:
       context: .
       dockerfile: Dockerfile
@@ -20,14 +20,15 @@ services:
       PG_USER: ${PG_USER}
       PG_PASSWORD: ${PG_PASSWORD}
       PG_PORT: ${PG_PORT}
+      PG_DATABASE: ${PG_DATABASE}
     volumes:
       - ../keys:/keys
-    ports:
-      - '8080:8000'
+    networks:
+      - picturas-network
     depends_on:
       - db
     env_file:
       - .env
 
 volumes:
-  db:
+  db-sub-ms:

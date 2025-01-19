@@ -18,7 +18,11 @@ router = APIRouter()
 
 load_dotenv()
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+WEBHOOK_SECRET = os.getenv('WEBHOOK_SECRET')
 USERS_ENDPOINT = os.getenv('USERS_ENDPOINT')
+PRICE_OBJECT = os.getenv('PRICE_OBJECT')
+SUCCESS_URL = os.getenv('SUCCESS_URL')
+CANCEL_URL = os.getenv('CANCEL_URL')
 
 with open("/keys/access.key.pub", "r") as file:
     pub_key = file.read().strip()
@@ -88,11 +92,11 @@ async def create_checkout_session(req: Request, db: Session = Depends(get_db)):
             payment_method_types=['card'],
             mode='subscription',
             line_items=[{
-                'price': 'price_1QhdkQIu8PvkBpDWPolasFE4',
+                'price': PRICE_OBJECT,
                 'quantity': 1,
             }],
-            success_url='https://example.com/success',
-            cancel_url='https://example.com/cancel',
+            success_url= SUCCESS_URL,
+            cancel_url= CANCEL_URL,
         )
 
         sub_exists = db.query(Subscription).filter_by(user_id = user_id).first()
@@ -102,7 +106,7 @@ async def create_checkout_session(req: Request, db: Session = Depends(get_db)):
             sub = Subscription(
                 session_id = session.id,
                 user_id = user_id,
-                price = '9.99',
+                price = 9.99,
                 stripe_subscription_id = session.subscription,
                 start_date = datetime.utcnow(),
                 end_date = datetime.utcnow() + timedelta(days=30),
@@ -129,11 +133,61 @@ async def create_checkout_session(req: Request, db: Session = Depends(get_db)):
             content={'error': str(e)}
         )
 
-# Cancel a subscription
-@router.post('/cancel-subscription')
-async def cancel_subscription(req: Request, db: Session = Depends(get_db)):
+# Handle stripe webhook events
+@router.post('/webhook')
+async def handle_webhook(req: Request, res: Response, db: Session = Depends(get_db)):
+    raw_payload = await req.body()
+    sig_header = req.headers.get('Stripe-Signature')
+
+    payload = json.loads(raw_payload.decode('utf-8'))
+    s_id = payload['data']['object']['id']
+
+    record = db.query(Subscription).filter_by(session_id = s_id).first()
+    retrieved_session = stripe.checkout.Session.retrieve(s_id)
+    record.stripe_subscription_id = retrieved_session.subscription
+    db.commit()
+
     try:
-        # Get user_id from access token
+        event = stripe.Webhook.construct_event(
+            raw_payload, sig_header, WEBHOOK_SECRET
+        )
+    
+        match event['type']:
+            case 'invoice.payment_succeeded':
+                invoice = event['data']['object']
+                stripe_sub_id = invoice['subscription']
+                sub = db.query(Subscription).filter_by(stripe_subscription_id = stripe_sub_id).first()
+                if sub:
+                    if invoice['billing_reason'] == 'subscription_create':
+                        sub.status = 'active'
+                        db.commit()
+
+                    elif invoice['billing_reason'] == 'subscription_update':
+                        sub.end_date = datetime.fromtimestamp(invoice['period']['end'])
+                        db.commit()
+
+                await notif_users(sub)
+
+        return JSONResponse(
+            status_code=200,
+            content={'status': 'success'}
+        )
+    
+    except stripe.error.SignatureVerificationError:
+        return JSONResponse(
+            status_code=400,
+            content={'error': 'Invalid Signature'}
+        )
+    
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={'error': str(e)}
+        )
+    
+@router.get('/subscription-details')
+async def get_subscription_details(req: Request, db: Session = Depends(get_db)):
+    try:
         data = await req.cookies()
         access_token = data['access_token']
 
@@ -160,89 +214,29 @@ async def cancel_subscription(req: Request, db: Session = Depends(get_db)):
                 content={'error': 'Missing required fields'}
             )
 
-        # Get subscription record from db and delete it from Stripe
         sub = db.query(Subscription).filter_by(user_id = user_id).first()
-        if sub:
-            stripe.Subscription.delete(sub.stripe_subscription_id)
-            sub.status = 'inactive'
-            db.commit()
-            await notif_users(sub)
+
+        if not sub:
             return JSONResponse(
-                status_code=200,
-                content={'message': 'Subscription canceled'}
+                status_code=404,
+                content={'error': 'Subscription not found'}
             )
 
         return JSONResponse(
-            status_code=404,
-            content={'error': 'Subscription not found'}
-        )
-
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={'error': str(e)}
-        )
-
-# Handle stripe webhook events
-@router.post('/webhook')
-async def handle_webhook(req: Request, res: Response, db: Session = Depends(get_db)):
-    raw_payload = await req.body()
-    sig_header = req.headers.get('Stripe-Signature')
-
-    payload = json.loads(raw_payload.decode('utf-8'))
-    s_id = payload['data']['object']['id']
-
-    record = db.query(Subscription).filter_by(session_id = s_id).first()
-    retrieved_session = stripe.checkout.Session.retrieve(s_id)
-    record.stripe_subscription_id = retrieved_session.subscription
-    db.commit()
-
-    try:
-        event = stripe.Webhook.construct_event(
-            raw_payload, sig_header, os.getenv('WEBHOOK_SECRET')
-        )
-    
-        match event['type']:
-            case 'checkout.session.completed':
-                session = event['data']['object']
-                stripe_sub_id = session['subscription']
-                sub = db.query(Subscription).filter_by(stripe_subscription_id = stripe_sub_id).first()
-                if sub:
-                    sub.status = 'active'
-                    db.commit()
-                    await notif_users(sub)
-            
-            case 'customer.subscription.deleted':
-                sub = db.query(Subscription).filter_by(stripe_subscription_id = event['data']['object']['id']).first()
-                if sub:
-                    sub.status = 'inactive'
-                    db.commit()
-                    await notif_users(sub)
-
-        return JSONResponse(
             status_code=200,
-            content={'status': 'success'}
+            content={
+                'sub_id': sub.id,
+                'sub_price': sub.price,
+                'start_date': sub.start_date,
+                'end_date': sub.end_date,
+                'status': sub.status.
+                'user_role': 'premium' if sub.status == 'active' else 'default'
+            }
         )
-    
-    except stripe.error.SignatureVerificationError:
-        return JSONResponse(
-            status_code=400,
-            content={'error': 'Invalid Signature'}
-        )
-    
+
     except Exception as e:
         return JSONResponse(
             status_code=500,
             content={'error': str(e)}
         )
-
-@router.get('/reset-access-token')  # redirecionar usar para um endpoint para resetar o token
-async def reset(req: Request, res: Response):
-    res.set_cookie(key='access_token', value='', max_age=-1)
-    return JSONResponse(
-        status_code=200,
-        content={'message': 'Access token reset'}
-    )
-    
-
 

@@ -2,14 +2,17 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from dotenv import load_dotenv
+
+load_dotenv()
 
 url_obj = URL.create(
     drivername='postgresql',
-    username='postgres',
-    password='postgres',
-    host='db',
-    port='5432',
-    database='subscriptions'
+    username='${PG_USER}',
+    password='${PG_PASSWORD}',
+    host='${PG_HOST}',
+    port='${PG_PORT}',
+    database='${PG_DATABASE}'
 )
 
 engine = create_engine(url_obj)
