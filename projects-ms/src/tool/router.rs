@@ -5,7 +5,7 @@ use crate::tool::controller::ImageVersionWithUrl;
 use crate::tool::model::RequestedTool;
 use crate::tool::websocket;
 use crate::user::AccessTokenClaims;
-use crate::{tool, AppState};
+use crate::{image, tool, AppState};
 use axum::body::Bytes;
 use axum::extract::{Path, State};
 use axum::http::{header, HeaderMap, HeaderValue};
@@ -85,18 +85,34 @@ async fn put_tools(
         .map(Json))
 }
 
+#[derive(serde::Deserialize)]
+struct ApplyToolsRequest {
+    filter_images: Option<Vec<Uuid>>,
+}
+
 #[debug_handler]
 async fn apply_tools(
     Path(project_id): Path<Uuid>,
     user: AccessTokenClaims,
     State(state): State<AppState>,
+    Json(image_ids): Json<ApplyToolsRequest>,
 ) -> Result<impl IntoResponse> {
     if !controller::can_modify(project_id, user.sub, &state).await? {
         return Err(Forbidden);
     }
 
-    tool::controller::apply_added_tools(project_id, user.sub, &state).await?;
+    let mut images = image::controller::get_original_images(project_id, &state).await?;
+
+    if let Some(filter_images) = &image_ids.filter_images {
+        images.retain(|image| filter_images.contains(&image.id));
+    }
+
+    tool::controller::apply_added_tools(project_id, user.sub, &images, &state).await?;
+
+    let image_ids = images.iter().map(|image| image.id).collect::<Vec<_>>();
+
     Ok(Json(json!({
+        "image_ids": image_ids,
         "message": "Hook to websocket to get realtime results",
     })))
 }
