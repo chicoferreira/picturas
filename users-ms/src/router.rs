@@ -1,5 +1,5 @@
 use crate::error::{AppError, AppResult};
-use crate::{jwt, password, user, AppState};
+use crate::{jwt, password, redis, user, AppState};
 use axum::extract::State;
 use axum::http::{header, HeaderMap};
 use axum::response::IntoResponse;
@@ -19,6 +19,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/v1/users/refresh", post(refresh_access_token))
         .route("/api/v1/users/me", get(get_current_user))
         .route("/api/v1/users/logout", post(logout_user))
+        .route("/api/v1/users/changepassword", post(change_password))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
 }
@@ -63,8 +64,11 @@ async fn register_user(
 
     let user = user::register_user(request, &state).await?;
 
-    let access_token = jwt::create_access_token(&state, &user)?;
-    let refresh_token = jwt::create_refresh_token(&state, &user)?;
+    let token_id = Uuid::new_v4();
+    let refresh_token = jwt::create_refresh_token(&state, token_id, &user)?;
+    let access_token = jwt::create_access_token(&state, token_id, &user)?;
+
+    redis::store_token(token_id, user.uuid, &state).await?;
 
     let mut headers = HeaderMap::new();
     append_access_token_cookie(&mut headers, &access_token, &state);
@@ -108,8 +112,11 @@ async fn login_user(
         return Err(AppError::InvalidPassword);
     }
 
-    let access_token = jwt::create_access_token(&state, &user)?;
-    let refresh_token = jwt::create_refresh_token(&state, &user)?;
+    let token_id = Uuid::new_v4();
+    let access_token = jwt::create_access_token(&state, token_id, &user)?;
+    let refresh_token = jwt::create_refresh_token(&state, token_id, &user)?;
+
+    redis::store_token(token_id, user.uuid, &state).await?;
 
     let mut headers = HeaderMap::new();
     append_access_token_cookie(&mut headers, &access_token, &state);
@@ -144,7 +151,15 @@ async fn refresh_access_token(
         .await?
         .ok_or(AppError::InvalidToken)?;
 
-    let access_token = jwt::create_access_token(&state, &user)?;
+    let user_uuid_from_redis = redis::get_user_id_from_token(token.token_id, &state)
+        .await?
+        .ok_or(AppError::InvalidToken)?;
+
+    if user.uuid != user_uuid_from_redis {
+        return Err(AppError::InvalidToken);
+    }
+
+    let access_token = jwt::create_access_token(&state, token.token_id, &user)?;
 
     let mut headers = HeaderMap::new();
     append_access_token_cookie(&mut headers, &access_token, &state);
@@ -199,6 +214,8 @@ async fn logout_user(
         .await?
         .ok_or(AppError::Unauthorized)?;
 
+    redis::delete_token(token.token_id, &state).await?;
+
     let mut headers = HeaderMap::new();
 
     let mut append_empty_cookie = |name: &str| {
@@ -226,6 +243,60 @@ async fn logout_user(
     };
 
     Ok((headers, Json(user)))
+}
+
+#[derive(serde::Deserialize, Validate)]
+struct ChangePasswordRequest {
+    #[validate(length(min = 8, max = 50))]
+    current_password: String,
+    #[validate(length(min = 8, max = 50))]
+    new_password: String,
+}
+
+#[derive(serde::Serialize)]
+struct ChangePasswordResponse {
+    access_token: String,
+    refresh_token: String,
+}
+
+#[debug_handler]
+async fn change_password(
+    cookie_jar: CookieJar,
+    State(state): State<AppState>,
+    Json(request): Json<ChangePasswordRequest>,
+) -> AppResult<impl IntoResponse> {
+    let access_token = cookie_jar
+        .get(ACCESS_TOKEN_COOKIE_NAME)
+        .ok_or(AppError::InvalidToken)?;
+
+    let token = jwt::decode_access_token(&state, access_token.value())?;
+    let user = user::get_user_by_uuid(token.sub, &state)
+        .await?
+        .ok_or(AppError::Unauthorized)?;
+
+    if !password::verify_password(&request.current_password, &user.password)? {
+        return Err(AppError::InvalidPassword);
+    }
+
+    redis::delete_token(token.token_id, &state).await?;
+    user::change_password(user.uuid, request.new_password.clone(), &state).await?;
+    let token_id = Uuid::new_v4();
+    let access_token = jwt::create_access_token(&state, token_id, &user)?;
+    let refresh_token = jwt::create_refresh_token(&state, token_id, &user)?;
+
+    redis::store_token(token_id, user.uuid, &state).await?;
+
+    let mut headers = HeaderMap::new();
+    append_access_token_cookie(&mut headers, &access_token, &state);
+    append_refresh_token_cookie(&mut headers, &refresh_token, &state);
+
+    Ok((
+        headers,
+        Json(ChangePasswordResponse {
+            access_token,
+            refresh_token,
+        }),
+    ))
 }
 
 fn append_access_token_cookie(

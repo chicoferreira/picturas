@@ -13,6 +13,7 @@ pub struct AccessTokenClaims {
     pub sub: Uuid,
     pub name: String,
     pub email: String,
+    pub token_id: Uuid,
     pub exp: i64,
 }
 
@@ -23,7 +24,7 @@ pub struct RefreshTokenClaims {
     pub exp: i64,
 }
 
-pub fn create_access_token(state: &AppState, user: &User) -> AppResult<String> {
+pub fn create_access_token(state: &AppState, token_id: Uuid, user: &User) -> AppResult<String> {
     let age = state.config.access_token_max_age;
     let expiration = Utc::now().add(age).timestamp();
 
@@ -31,6 +32,7 @@ pub fn create_access_token(state: &AppState, user: &User) -> AppResult<String> {
         sub: user.uuid,
         name: user.name.clone(),
         email: user.email.clone(),
+        token_id,
         exp: expiration,
     };
 
@@ -39,13 +41,13 @@ pub fn create_access_token(state: &AppState, user: &User) -> AppResult<String> {
     Ok(token)
 }
 
-pub fn create_refresh_token(state: &AppState, user: &User) -> AppResult<String> {
+pub fn create_refresh_token(state: &AppState, token_id: Uuid, user: &User) -> AppResult<String> {
     let age = state.config.refresh_token_max_age;
     let expiration = Utc::now().add(age).timestamp();
 
     let claims = RefreshTokenClaims {
         sub: user.uuid,
-        token_id: Uuid::new_v4(),
+        token_id,
         exp: expiration,
     };
 

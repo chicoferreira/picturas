@@ -59,3 +59,21 @@ pub async fn register_user(user: RegisterRequest, state: &AppState) -> AppResult
 
     Ok(user)
 }
+
+pub async fn change_password(
+    user_uuid: Uuid,
+    new_password: String,
+    state: &AppState,
+) -> AppResult<()> {
+    let password = password::hash_password(&new_password)?;
+
+    sqlx::query!(
+        "UPDATE users SET password = $1 WHERE uuid = $2",
+        password,
+        user_uuid
+    )
+    .execute(&state.pg_pool)
+    .await?;
+
+    Ok(())
+}

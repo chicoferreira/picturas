@@ -15,6 +15,12 @@ pub struct Config {
     #[arg(long, env)]
     pub pg_database: String,
     #[arg(long, env)]
+    pub redis_host: String,
+    #[arg(long, env, default_value_t = 6379)]
+    pub redis_port: u16,
+    #[arg(long, env)]
+    pub redis_password: Option<String>,
+    #[arg(long, env)]
     pub bind_ip: String,
     #[arg(long, env, default_value_t = 8080)]
     pub bind_port: u16,

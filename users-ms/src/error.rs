@@ -16,6 +16,8 @@ pub enum AppError {
     ValidationError(#[from] validator::ValidationErrors),
     #[error(transparent)]
     SqlxError(#[from] sqlx::error::Error),
+    #[error("redis: {0}")]
+    RedisError(#[from] rustis::Error),
     #[error("argon2: {0}")]
     Argon2Error(#[from] Argon2Error),
     #[error(transparent)]
@@ -74,6 +76,10 @@ impl IntoResponse for AppError {
                 None,
             ),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized".to_string(), None),
+            AppError::RedisError(ref err) => {
+                error!(error = ?err, "Redis error occurred");
+                internal_server_error()
+            }
             AppError::SqlxError(ref err) => {
                 error!(error = ?err, "Database error occurred");
                 internal_server_error()
