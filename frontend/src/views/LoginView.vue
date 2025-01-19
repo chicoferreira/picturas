@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -57,12 +57,71 @@ const handleSubmit = async () => {
 
   isSubmitting.value = false
 }
+
+// Background animation
+const animateBackground = () => {
+  const canvas = document.getElementById('bgCanvas') as HTMLCanvasElement
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  canvas.width = window.innerWidth
+  canvas.height = window.innerHeight
+
+  const particles: { x: number; y: number; size: number; speedX: number; speedY: number }[] = []
+  const particleCount = 100
+
+  for (let i = 0; i < particleCount; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      size: Math.random() * 5 + 1,
+      speedX: Math.random() * 3 - 1.5,
+      speedY: Math.random() * 3 - 1.5
+    })
+  }
+
+  function animate() {
+    if (!ctx) return
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    particles.forEach((particle) => {
+      ctx.beginPath()
+      ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
+      ctx.fillStyle = '#6D28D9'
+      ctx.fill()
+
+      particle.x += particle.speedX
+      particle.y += particle.speedY
+
+      if (particle.x < 0 || particle.x > canvas.width) particle.speedX *= -1
+      if (particle.y < 0 || particle.y > canvas.height) particle.speedY *= -1
+    })
+    requestAnimationFrame(animate)
+  }
+
+  animate()
+}
+
+const handleResize = () => {
+  const canvas = document.getElementById('bgCanvas') as HTMLCanvasElement
+  canvas.width = window.innerWidth
+  canvas.height = window.innerHeight
+}
+
+onMounted(() => {
+  animateBackground()
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+})
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-center bg-[#030712] p-6">
-    <div class="w-full max-w-md space-y-8">
-      <!-- Logo -->
+  <div class="min-h-screen flex flex-col items-center justify-center bg-[#030712] p-6 relative">
+    <canvas id="bgCanvas" class="absolute inset-0 z-0"></canvas>
+    <div class="w-full max-w-md space-y-8 relative z-10">
+    
       <div class="text-center">
         <h1
           class="text-5xl font-bold bg-gradient-to-r from-[#6D28D9] to-white bg-clip-text text-transparent tracking-tight"
@@ -71,7 +130,7 @@ const handleSubmit = async () => {
         </h1>
       </div>
 
-      <Card class="border-0 bg-[#030712]">
+      <Card class="border-0 bg-[#030712] bg-opacity-80 backdrop-blur-sm">
         <CardHeader>
           <CardTitle class="text-3xl font-semibold tracking-tight text-white text-center">
             Login
@@ -91,7 +150,7 @@ const handleSubmit = async () => {
                 placeholder="m@example.com"
                 required
                 :class="{ 'border-red-500': errors.email }"
-                class="bg-transparent text-white border-gray-800"
+                class="bg-transparent text-white border-gray-800 rounded-2xl"
               />
               <p v-if="errors.email" class="text-sm text-red-500">{{ errors.email }}</p>
             </div>
@@ -104,7 +163,7 @@ const handleSubmit = async () => {
                 type="password"
                 required
                 :class="{ 'border-red-500': errors.password }"
-                class="bg-transparent text-white border-gray-800"
+                class="bg-transparent text-white border-gray-800 rounded-2xl"
               />
               <p v-if="errors.password" class="text-sm text-red-500">{{ errors.password }}</p>
             </div>
@@ -112,7 +171,7 @@ const handleSubmit = async () => {
             <Button
               type="submit"
               :disabled="isSubmitting"
-              class="w-full bg-[#6D28D9] hover:bg-[#5b21b6] transition-colors"
+              class="w-full bg-[#6D28D9] hover:bg-[#5b21b6] transition-colors rounded-3xl"
             >
               {{ isSubmitting ? 'Logging in...' : 'Login' }}
             </Button>
@@ -122,3 +181,4 @@ const handleSubmit = async () => {
     </div>
   </div>
 </template>
+
