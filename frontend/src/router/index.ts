@@ -10,16 +10,6 @@ const router = createRouter({
       component: () => import('../views/TesteHomeView.vue'),
     },
     {
-      path: '/register',
-      name: 'Register',
-      component: () => import('../views/CreateAccount.vue'),
-    },
-    {
-      path: '/login',
-      name: 'Login',
-      component: () => import('../views/LoginView.vue'),
-    },
-    {
       path: '/about',
       name: 'about',
       // route level code-splitting
@@ -59,6 +49,16 @@ const router = createRouter({
       path: '/reset-password',
       name: 'ResetPassword',
       component: () => import('../views/ChangePass.vue'),
+    },
+    {
+      path: '/login',
+      name: 'Login',
+      component: () => import('../views/LoginView.vue'),
+    },
+    {
+      path: '/register',
+      name: 'Register',
+      component: () => import('../views/CreateAccount.vue'),
     },
   ],
 })

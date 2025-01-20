@@ -31,8 +31,6 @@ const menuLinks = links.filter((link) => {
       link.name !== 'home' &&
       link.name !== 'Settings' &&
       link.name !== 'TestePage' &&
-      link.name !== 'Register' &&
-      link.name !== 'Login' &&
       link.name !== 'ResetPassword' &&
       link.name !== 'Projects'
     )
