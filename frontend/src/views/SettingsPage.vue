@@ -87,7 +87,9 @@ const activeTab = ref('account')
                   <h3 class="font-medium">Password</h3>
                   <p class="text-[#969696]">Last Edit 1 month ago</p>
                 </div>
-                <Button variant="link" class="text-[#DD3592]">Edit</Button>
+                <router-link to="/reset-password">
+                  <Button variant="link" class="text-[#DD3592]">Edit</Button>
+                </router-link>
               </div>
 
               <Separator class="bg-white/10" />
