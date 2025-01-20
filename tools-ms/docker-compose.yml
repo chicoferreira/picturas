@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      - PICTURAS_AVAILABLE_TOOLS=crop,scale,addBorder,adjustBrightness,adjustContrast,rotate,blur,ocr
+      - PICTURAS_AVAILABLE_TOOLS=crop,scale,addBorder,adjustBrightness,adjustContrast,rotate,blur,ocr,grayscale,binarize
       - RUST_LOG=debug
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_USER=guest

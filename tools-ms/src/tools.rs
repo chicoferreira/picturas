@@ -16,6 +16,8 @@ pub enum Tool {
     AdjustContrast { value: f32 },
     Rotate { angle: f32 },
     Blur { radius: i32 },
+    Grayscale,
+    Binarize,
     Ocr,
 }
 
@@ -34,6 +36,8 @@ impl Tool {
             Tool::AdjustContrast { value } => Image(adjust_contrast(image, *value)),
             Tool::Rotate { angle } => Image(rotate_image(image, *angle)),
             Tool::Blur { radius } => Image(blur_image(image, *radius)),
+            Tool::Grayscale => Image(grayscale(image)),
+            Tool::Binarize => Image(binarize(image)),
             Tool::Ocr => Text(ocr(image)?),
         })
     }
@@ -79,6 +83,16 @@ fn rotate_image(image: PhotonImage, angle: f32) -> PhotonImage {
 
 fn blur_image(mut image: PhotonImage, radius: i32) -> PhotonImage {
     photon_rs::conv::gaussian_blur(&mut image, radius);
+    image
+}
+
+fn grayscale(mut image: PhotonImage) -> PhotonImage {
+    photon_rs::monochrome::grayscale(&mut image);
+    image
+}
+
+fn binarize(mut image: PhotonImage) -> PhotonImage {
+    photon_rs::monochrome::threshold(&mut image, 128);
     image
 }
 
