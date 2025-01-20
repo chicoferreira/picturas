@@ -19,8 +19,15 @@ export function useAuth() {
         return
       }
 
-      alert('Conta registada com sucesso!')
+      const data = await response.json();
+
+      document.cookie = `access_token=${data.access_token}; Path=/`;
+      document.cookie = `refresh_token=${data.refresh_token}; Path=/`;
+
+      alert('Register successful!');
       router.push('/projects')
+      
+      return data;
     } catch (error: any) {
       console.error('Erro ao registar:', error.message)
       alert(`Erro ao registar: ${error.message}`)
@@ -42,13 +49,40 @@ export function useAuth() {
         throw new Error(error.message || 'Failed to login')
       }
 
-      alert('Login efetuado com sucesso!')
+      const data = await response.json();
+
+      document.cookie = `access_token=${data.access_token}; Path=/`;
+      document.cookie = `refresh_token=${data.refresh_token}; Path=/`;
+
+      alert('Login successful!');
       router.push('/projects')
+      
+      return data;
     } catch (error: any) {
       console.error('Erro ao efetuar login:', error.message)
       alert(`Erro ao efetuar login: ${error.message}`)
     }
   }
 
-  return { registerUser, loginUser }
+  const getUser = async () => {
+    try {
+      const response = await fetch('http://localhost:80/api/v1/users/me', {
+        method: 'GET',
+        credentials: 'include',
+      });
+  
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to get user');
+      }
+  
+      return await response.json();
+    } catch (error: any) {
+      console.error('Error obtaining user:', error.message);
+      alert(`Error obtaining user: ${error.message}`);
+      throw error;
+    }
+  };  
+
+  return { registerUser, loginUser, getUser }
 }
