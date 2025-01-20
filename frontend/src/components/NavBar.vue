@@ -25,7 +25,8 @@ const menuLinks = links.filter((link) => {
       link.name !== 'Settings' &&
       link.name !== 'ResetPassword' &&
       link.name !== 'Projects' &&
-      link.name !== 'Subscriptions'
+      link.name !== 'Subscriptions' &&
+      link.name !== 'ProjectView'
     )
   } else {
     // Excluir rotas utilizadores autenticados
@@ -33,7 +34,8 @@ const menuLinks = links.filter((link) => {
       link.name !== 'Register' &&
       link.name !== 'Login' &&
       link.name !== 'home' &&
-      link.name !== 'ResetPassword'
+      link.name !== 'ResetPassword' &&
+      link.name !== 'ProjectView'
     )
   }})
 
