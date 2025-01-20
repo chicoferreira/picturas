@@ -175,7 +175,7 @@ onUnmounted(() => {
               {{ isSubmitting ? 'Logging in...' : 'Login' }}
             </Button>
             <p class="text-sm text-[#969696]">
-              <router-link to="/reset-password" class="text-[#969696] hover:underline">
+              <router-link to="" class="text-[#969696] hover:underline">
                 Forgot your password?
               </router-link>
             </p>

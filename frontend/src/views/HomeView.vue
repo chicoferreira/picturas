@@ -140,7 +140,7 @@ const animateBackground = () => {
               Don't have an account?
               <a @click="toggleForm" href="#" class="text-[#6D28D9] hover:underline">Register</a>
             </p>
-            <router-link to="/reset-password" class="text-[#6D28D9] hover:underline">
+            <router-link to="" class="text-[#6D28D9] hover:underline">
               Forgot your password?
             </router-link>
           </div>
