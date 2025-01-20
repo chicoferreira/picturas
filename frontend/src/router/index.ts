@@ -13,7 +13,7 @@ const router = createRouter({
       path: '/register',
       name: 'Register',
       component: () => import('../views/CreateAccount.vue'),
-      meta: { requiresAuth: false }
+      meta: { requiresAuth: false },
     },
     {
       path: '/login',
@@ -57,6 +57,21 @@ const router = createRouter({
       name: 'Settings',
       component: () => import('../views/SettingsPage.vue'),
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/reset-password',
+      name: 'ResetPassword',
+      component: () => import('../views/ChangePass.vue'),
+    },
+    {
+      path: '/login',
+      name: 'Login',
+      component: () => import('../views/LoginView.vue'),
+    },
+    {
+      path: '/register',
+      name: 'Register',
+      component: () => import('../views/CreateAccount.vue'),
     },
   ],
 })
