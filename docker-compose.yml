@@ -5,6 +5,7 @@ include:
   - bg-remover-tool-ms/docker-compose.yml
   - watermark-tool-ms/docker-compose.yml
   - api-gateway/docker-compose.yml
+  - subscription-ms/docker-compose.yml
 
 networks:
   picturas-network:

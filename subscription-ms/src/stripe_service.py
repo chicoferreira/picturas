@@ -23,8 +23,9 @@ USERS_ENDPOINT = os.getenv('USERS_ENDPOINT')
 PRICE_OBJECT = os.getenv('PRICE_OBJECT')
 SUCCESS_URL = os.getenv('SUCCESS_URL')
 CANCEL_URL = os.getenv('CANCEL_URL')
+ACCESS_TOKEN_PUBLIC_KEY = os.getenv('ACCESS_TOKEN_PUBLIC_KEY')
 
-with open("/keys/access.key.pub", "r") as file:
+with open(ACCESS_TOKEN_PUBLIC_KEY, "r") as file:
     pub_key = file.read().strip()
 
 # POST to the users endpoint with premium role
@@ -229,7 +230,7 @@ async def get_subscription_details(req: Request, db: Session = Depends(get_db)):
                 'sub_price': sub.price,
                 'start_date': sub.start_date,
                 'end_date': sub.end_date,
-                'status': sub.status.
+                'status': sub.status,
                 'user_role': 'premium' if sub.status == 'active' else 'default'
             }
         )
