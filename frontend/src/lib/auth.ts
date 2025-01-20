@@ -152,5 +152,5 @@ export function useAuth() {
     return response
   }
 
-  return { registerUser, loginUser, getUser, changePassword }
+  return { registerUser, loginUser, getUser, changePassword, authFetch}
 }
