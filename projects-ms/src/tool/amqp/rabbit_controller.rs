@@ -47,7 +47,7 @@ impl RabbitMqController {
     pub async fn create_consumer(&self, state: &AppState) -> RabbitMqConsumer {
         let exchange = &state.config.rabbitmq_results_exchange;
         let routing_key = &state.config.rabbitmq_results_routing_key;
-        let consumer = create_results_consumer(&self.channel, exchange, &routing_key).await;
+        let consumer = create_results_consumer(&self.channel, exchange, routing_key).await;
 
         info!(exchange, routing_key, "Created consumer");
 
