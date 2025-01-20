@@ -60,10 +60,10 @@ fn adjust_brightness(mut image: PhotonImage, value: f32) -> PhotonImage {
 
     if value > 0.0 {
         photon_rs::effects::inc_brightness(&mut image, (value * 255.0) as u8);
-        println!("Increased brightness by {}", (value * 255.0));
+        println!("Increased brightness by {}", value * 255.0);
     } else {
         photon_rs::effects::dec_brightness(&mut image, (-value * 255.0) as u8);
-        println!("Decreased brightness by {}", (-value * 255.0));
+        println!("Decreased brightness by {}", -value * 255.0);
     }
     image
 }
