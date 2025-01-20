@@ -16,8 +16,6 @@ export function useAuth() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        alert(`Erro: ${error.message}`)
         return
       }
 
@@ -62,7 +60,34 @@ export function useAuth() {
       return data;
     } catch (error: any) {
       console.error('Erro ao efetuar login:', error.message)
-      alert(`Erro ao efetuar login: ${error.message}`)
+    }
+  }
+
+  const logoutUser = async () => {
+    try {
+      const response = await authFetch(API_BASE + 'users/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to logout');
+      }
+
+      const data = await response.json();
+
+      document.cookie = `access_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+      document.cookie = `refresh_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+
+      alert('Logout successful!');
+      router.push('/login')
+
+      return data;
+    } catch (error: any) {
+      console.error('Error logging out:', error.message);
+      alert(`Error logging out: ${error.message}`);
+      throw error;
     }
   }
 
@@ -81,8 +106,7 @@ export function useAuth() {
       return await response.json();
     } catch (error: any) {
       console.error('Error obtaining user:', error.message);
-      alert(`Error obtaining user: ${error.message}`);
-      throw error;
+      return null;
     }
   };
 
@@ -153,5 +177,5 @@ export function useAuth() {
     return response
   }
 
-  return { registerUser, loginUser, getUser, changePassword, authFetch}
+  return { registerUser, loginUser, getUser, changePassword, authFetch, logoutUser}
 }

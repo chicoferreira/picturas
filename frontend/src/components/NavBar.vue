@@ -7,9 +7,10 @@ import {
 } from '@/components/ui/navigation-menu'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-
+import { useAuth } from '@/lib/auth'
 
 const router = useRouter()
+const { logoutUser } = useAuth()
 
 const links = router.options.routes.map((route) => ({
   name: route.name,
@@ -41,6 +42,7 @@ const menuLinks = links.filter((link) => {
 
 const viewLogout = () => {
   useUserStore().logout()
+  logoutUser()
   router.push('/')
 }
 

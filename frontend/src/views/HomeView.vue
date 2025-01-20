@@ -79,6 +79,12 @@ const handleRegister = async () => {
   try {
     const response = await registerUser(registerForm.username, registerForm.email, registerForm.password);
 
+    if (!response) {
+      alert('Email already exists')
+      isSubmitting.value = false
+      return
+    }
+
     useUserStore().login(
       response.name,
       response.email,
@@ -150,6 +156,12 @@ const handleLogin = async () => {
 
     const response = await getUser();
 
+    if (!response) {
+      alert('Invalid email or password');
+      isSubmitting.value = false;
+      return;
+    }
+  
     useUserStore().login(
       response.name,
       response.email,

@@ -65,6 +65,12 @@ const handleSubmit = async () => {
 
     const response = await getUser();
 
+    if (!response) {
+      alert('Invalid email or password');
+      isSubmitting.value = false;
+      return;
+    }
+
     useUserStore().login(
       response.name,
       response.email,
