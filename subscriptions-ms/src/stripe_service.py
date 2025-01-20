@@ -134,6 +134,53 @@ async def create_checkout_session(req: Request, db: Session = Depends(get_db)):
             content={'error': str(e)}
         )
 
+# Cancel a subscription
+@router.post('/cancel-subscription')
+async def cancel_subscription(req: Request, db: Session = Depends(get_db)):
+    try:
+        # Get user_id from access token
+        data = await req.cookies()
+        access_token = data['access_token']
+        if not access_token:
+            return JSONResponse(
+                status_code=400,
+                content={'error': 'Unauthorized'}
+            )
+        
+        access_token_decoded = jwt.decode(access_token, pub_key, algorithms='RS256')
+        now = datetime.utcnow()
+        if now > datetime.fromtimestamp(access_token_decoded['exp']):
+            return JSONResponse(
+                status_code=400,
+                content={'error': 'Unauthorized'}
+            )
+        user_id = access_token_decoded['sub']
+        if not user_id:
+            return JSONResponse(
+                status_code=400,
+                content={'error': 'Missing required fields'}
+            )
+        # Get subscription record from db and delete it from Stripe
+        sub = db.query(Subscription).filter_by(user_id = user_id).first()
+        if sub:
+            stripe.Subscription.delete(sub.stripe_subscription_id)
+            sub.status = 'inactive'
+            db.commit()
+            await notif_users(sub)
+            return JSONResponse(
+                status_code=200,
+                content={'message': 'Subscription canceled'}
+            )
+        return JSONResponse(
+            status_code=404,
+            content={'error': 'Subscription not found'}
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={'error': str(e)}
+        )
+
 # Handle stripe webhook events
 @router.post('/webhook')
 async def handle_webhook(req: Request, res: Response, db: Session = Depends(get_db)):
@@ -168,6 +215,13 @@ async def handle_webhook(req: Request, res: Response, db: Session = Depends(get_
                         db.commit()
 
                 await notif_users(sub)
+            
+            case 'customer.subscription.deleted':
+                sub = db.query(Subscription).filter_by(stripe_subscription_id = event['data']['object']['id']).first()
+                if sub:
+                    sub.status = 'inactive'
+                    db.commit()
+                    await notif_users(sub)
 
         return JSONResponse(
             status_code=200,
