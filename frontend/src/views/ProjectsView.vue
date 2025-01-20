@@ -1,75 +1,182 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { SearchIcon, UploadIcon, PencilIcon } from 'lucide-vue-next'
+import { SearchIcon, PlusIcon, PencilIcon } from 'lucide-vue-next'
 import { useUserStore } from '@/stores/user'
+import { useAuth } from '@/lib/auth'
+import { Card, CardFooter } from '@/components/ui/card'
+const API_BASE = import.meta.env.VITE_API_BASE  || 'http://localhost:80/api/v1';
+const router = useRouter()
+const userStore = useUserStore()
+
+console.log("API_BASE = " + API_BASE)
+
+const { authFetch } = useAuth()
 
 interface Project {
-  id: number
+  id: string
   name: string
-  image: string
+  imageUrl?: string
   lastEdited: number
+  firstImageId?: string
 }
 
-const router = useRouter()
+interface ApiProject {
+  id: string
+  name: string
+  user_id: string
+  created_at: string
+  updated_at: string
+}
+
+interface ApiImage {
+  id: string
+  name: string
+  project_id: string
+}
+
 const searchQuery = ref('')
-const dragActive = ref(false)
-const selectedProject = ref<Project | null>(null)
-const userStore = useUserStore()
+const projects = ref<Project[]>([])
 
 const userName = computed(() => userStore.name)
 const userEmail = computed(() => userStore.email)
 
-const projects = ref<Project[]>([
-  {
-    id: 1,
-    name: 'Mountain Landscape',
-    image: '/placeholder.svg?height=400&width=600',
-    lastEdited: 367,
-  },
-  {
-    id: 2,
-    name: 'Portrait Session',
-    image: '/placeholder.svg?height=400&width=600',
-    lastEdited: 368,
-  },
-  {
-    id: 3,
-    name: 'City Nightscape',
-    image: '/placeholder.svg?height=400&width=600',
-    lastEdited: 369,
-  },
-])
+function daysSince(dateString: string): number {
+  const updatedDate = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - updatedDate.getTime()
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24))
+}
+
+async function getProjectImage(projectId: string, imageId: string): Promise<string> {
+  try {
+    const response = await authFetch(
+      API_BASE + `/projects/${projectId}/images/${imageId}`,
+      {
+        method: 'GET',
+        credentials: 'include',
+      }
+    )
+    
+    if (!response.ok) throw new Error('Failed to fetch image')
+    
+    const blob = await response.blob()
+    return URL.createObjectURL(blob)
+  } catch (error) {
+    console.error('Error fetching image:', error)
+    return '/placeholder.svg?height=400&width=600'
+  }
+}
+
+async function getProjectImages(projectId: string): Promise<string | undefined> {
+  try {
+    const response = await authFetch(
+      API_BASE + `/projects/${projectId}/images`,
+      {
+        method: 'GET',
+        credentials: 'include',
+      }
+    )
+    
+    if (!response.ok) throw new Error('Failed to fetch project images')
+    
+    const images: ApiImage[] = await response.json()
+    if (images.length > 0) {
+      const imageUrl = await getProjectImage(projectId, images[0].id)
+      return imageUrl
+    }
+  } catch (error) {
+    console.error('Error fetching project images:', error)
+  }
+  return undefined
+}
+
+async function loadProjects() {
+  try {
+    const response = await authFetch(API_BASE + '/api/v1/projects', {
+      method: 'GET',
+      credentials: 'include',
+    })
+    
+    if (!response.ok) throw new Error(`Failed to fetch projects: ${response.status}`)
+    
+    const data: ApiProject[] = await response.json()
+
+    // Create base projects first
+    projects.value = data.map((apiProj) => ({
+      id: apiProj.id,
+      name: apiProj.name,
+      lastEdited: daysSince(apiProj.updated_at),
+      imageUrl: '/placeholder.svg?height=400&width=600',
+    }))
+
+    // Then fetch images for each project
+    for (const project of projects.value) {
+      const imageUrl = await getProjectImages(project.id)
+      if (imageUrl) {
+        project.imageUrl = imageUrl
+      }
+    }
+  } catch (error) {
+    console.error('Error loading projects:', error)
+  }
+}
+
+async function createNewProject() {
+  const name = prompt('Please enter the new project name:')
+  if (!name) return
+
+  try {
+    const response = await authFetch(API_BASE + '/api/v1/projects', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+
+    if (!response.ok) throw new Error(`Failed to create project: ${response.statusText}`)
+
+    const data = await response.json()
+    projects.value.push({
+      id: data.id,
+      name: data.name,
+      imageUrl: '/placeholder.svg?height=400&width=600',
+      lastEdited: 0,
+    })
+  } catch (error) {
+    console.error('Error creating project:', error)
+  }
+}
+
+async function deleteProject(projectId: string) {
+  try {
+    const response = await authFetch(API_BASE + `/projects/${projectId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    })
+
+    if (!response.ok) throw new Error(`Failed to delete project: ${response.status}`)
+
+    projects.value = projects.value.filter(p => p.id !== projectId)
+  } catch (error) {
+    console.error('Error deleting project:', error)
+  }
+}
 
 const filteredProjects = computed(() => {
-  let filtered = projects.value
-
-  if (selectedProject.value) {
-    filtered = filtered.filter((p) => p.id === selectedProject.value?.id)
-  } else if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter((p) => p.name.toLowerCase().includes(query))
-  }
-
-  return filtered
+  if (!searchQuery.value) return projects.value
+  const query = searchQuery.value.toLowerCase()
+  return projects.value.filter((p) => p.name.toLowerCase().includes(query))
 })
 
-const selectProject = (project: Project) => {
-  selectedProject.value = selectedProject.value?.id === project.id ? null : project
-}
-
-const handleDrop = (event: DragEvent) => {
-  dragActive.value = false
-  const files = event.dataTransfer?.files
-  if (files && files.length > 0) {
-    // Handle file upload and project creation
-    console.log('File dropped:', files[0])
-  }
-}
+onMounted(() => {
+  loadProjects()
+})
 </script>
+
 <template>
   <div class="min-h-screen bg-[#030712] flex">
     <!-- Sidebar -->
@@ -78,7 +185,9 @@ const handleDrop = (event: DragEvent) => {
       <div class="flex items-center space-x-3 mb-8">
         <Avatar class="h-10 w-10 bg-white">
           <AvatarImage src="/placeholder.svg" />
-          <AvatarFallback class="bg-white text-[#030712]">JD</AvatarFallback>
+          <AvatarFallback class="bg-white text-[#030712]">
+            {{ userName?.charAt(0) ?? 'U' }}
+          </AvatarFallback>
         </Avatar>
         <div class="flex flex-col">
           <span class="text-white">{{ userName }}</span>
@@ -95,8 +204,7 @@ const handleDrop = (event: DragEvent) => {
             :key="project.id"
             variant="ghost"
             class="w-full justify-start text-[#969696] hover:text-white hover:bg-[#6D28D9]/20"
-            :class="{ 'bg-[#6D28D9]/20 text-white': selectedProject?.id === project.id }"
-            @click="selectProject(project)"
+            @click="router.push(`/project/${project.id}`)"
           >
             {{ project.name }}
           </Button>
@@ -105,12 +213,12 @@ const handleDrop = (event: DragEvent) => {
 
       <!-- Logo and Actions -->
       <div class="space-y-3 mt-auto">
-        <h1
-          class="text-2xl text-center font-bold bg-gradient-to-r from-[#6D28D9] to-white bg-clip-text text-transparent tracking-tight"
-        >
+        <h1 class="text-2xl text-center font-bold bg-gradient-to-r from-[#6D28D9] to-white bg-clip-text text-transparent tracking-tight">
           PICTURAS
         </h1>
-        <Button class="w-full bg-[#6D28D9] hover:bg-[#5b21b6] text-white"> New Project </Button>
+        <Button class="w-full bg-[#6D28D9] hover:bg-[#5b21b6] text-white" @click="createNewProject">
+          New Project
+        </Button>
         <Button
           class="w-full bg-[#DD3592] hover:bg-[#c42e81] text-white"
           @click="router.push('/subscriptions')"
@@ -134,51 +242,65 @@ const handleDrop = (event: DragEvent) => {
         </div>
       </div>
 
-      <!-- Drag & Drop Area -->
-      <div
-        class="max-w-4xl mx-auto mb-8"
-        @dragenter.prevent="dragActive = true"
-        @dragleave.prevent="dragActive = false"
-        @dragover.prevent
-        @drop.prevent="handleDrop"
-      >
-        <div
-          class="border-2 border-dashed border-gray-700 bg-[#0f1629] rounded-lg p-12 text-center transition-all"
-          :class="{
-            'border-[#6D28D9] bg-[#6D28D9]/5': dragActive,
-            'hover:border-[#6D28D9] hover:bg-[#6D28D9]/5': !dragActive,
-          }"
-        >
-          <UploadIcon class="h-12 w-12 mx-auto mb-4 text-[#969696]" />
-          <p class="text-[#969696] text-lg">Drag and drop an image to create a new project</p>
-        </div>
-      </div>
-
       <!-- Projects Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-        <div
+        <!-- Project Cards -->
+        <Card
           v-for="project in filteredProjects"
           :key="project.id"
-          class="group bg-[#0f1629] rounded-lg overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-[#6D28D9]/10"
+          class="group bg-[#0f1629] overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-[#6D28D9]/10"
         >
-          <div class="aspect-video relative">
-            <img :src="project.image" :alt="project.name" class="w-full h-full object-cover" />
+          <div 
+            class="aspect-video relative cursor-pointer"
+            @click="router.push(`/project/${project.id}`)"
+          >
+            <img 
+              :src="project.imageUrl" 
+              :alt="project.name" 
+              class="w-full h-full object-cover"
+            />
           </div>
 
-          <div class="p-4 bg-[#0f1629] flex items-center justify-between">
+          <CardFooter class="p-4 bg-[#0f1629] flex items-center justify-between">
             <div>
               <h3 class="text-white font-medium">{{ project.name }}</h3>
-              <p class="text-sm text-[#969696]">Last edited - {{ project.lastEdited }} days ago</p>
+              <p class="text-sm text-[#969696]">
+                Last edited - {{ project.lastEdited }} days ago
+              </p>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              class="text-[#969696] hover:text-white hover:bg-[#6D28D9]/20"
-            >
-              <PencilIcon class="h-4 w-4" />
-            </Button>
+            <div class="flex gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                class="text-[#969696] hover:text-white hover:bg-[#6D28D9]/20"
+                @click="router.push(`/project/${project.id}`)"
+              >
+                <PencilIcon class="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                class="text-red-500 hover:text-red-400 hover:bg-red-500/20"
+                @click="deleteProject(project.id)"
+              >
+                <span class="i-lucide-trash-2 h-4 w-4" />
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
+
+        <!-- Create New Project Card -->
+        <Card
+          class="group bg-[#0f1629] overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-[#6D28D9]/10 cursor-pointer"
+          @click="createNewProject"
+        >
+          <div class="aspect-video relative flex items-center justify-center bg-[#0f1629]/50">
+            <PlusIcon class="h-16 w-16 text-[#6D28D9]" />
           </div>
-        </div>
+          <CardFooter class="p-4 bg-[#0f1629] flex items-center justify-center">
+            <h3 class="text-white font-medium">Create New Project</h3>
+          </CardFooter>
+        </Card>
       </div>
     </div>
   </div>

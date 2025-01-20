@@ -2,11 +2,12 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
 export function useAuth() {
+  const API_BASE = import.meta.env.API_BASE || 'http://localhost:80/api/v1/';
   const router = useRouter()
 
   const registerUser = async (username: string, email: string, password: string) => {
     try {
-      const response = await authFetch('http://localhost:80/api/v1/users/register', {
+      const response = await authFetch(API_BASE + 'users/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -37,7 +38,7 @@ export function useAuth() {
 
   const loginUser = async (email: string, password: string) => {
     try {
-      const response = await authFetch('http://localhost:80/api/v1/users/login', {
+      const response = await authFetch(API_BASE + 'users/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -67,7 +68,7 @@ export function useAuth() {
 
   const getUser = async () => {
     try {
-      const response = await authFetch('http://localhost:80/api/v1/users/me', {
+      const response = await authFetch(API_BASE + 'users/me', {
         method: 'GET',
         credentials: 'include',
       });
@@ -87,7 +88,7 @@ export function useAuth() {
 
   const changePassword = async (current_password: string, new_password: string) => {
     try {
-      const response = await authFetch('http://localhost:80/api/v1/users/changepassword', {
+      const response = await authFetch(API_BASE + 'users/changepassword', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -131,7 +132,7 @@ export function useAuth() {
     if (response.status === 401) {
       console.warn('Got 401, attempting refresh...')
   
-      const refreshResponse = await fetch('http://localhost:80/api/v1/users/refresh', {
+      const refreshResponse = await fetch(API_BASE + 'users/refresh', {
         method: 'POST',
         credentials: 'include',
       })
@@ -152,5 +153,5 @@ export function useAuth() {
     return response
   }
 
-  return { registerUser, loginUser, getUser, changePassword }
+  return { registerUser, loginUser, getUser, changePassword, authFetch}
 }

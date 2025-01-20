@@ -43,6 +43,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/project/:id',
+      name: 'ProjectView',
+      component: () => import('../views/ImageEditor.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/reset-password',
       name: 'ResetPassword',
       component: () => import('../views/ChangePass.vue'),
