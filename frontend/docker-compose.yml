@@ -1,0 +1,15 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - API_URL=http://localhost:5000
+      - PORT=3000
+
+    networks:
+      - picturas-network
+    depends_on:
+      - projects-ms
+      - tools-ms

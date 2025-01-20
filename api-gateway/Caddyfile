@@ -33,5 +33,5 @@ http://localhost {
 		}
 	}
 
-	respond "Not found" 404
+	reverse_proxy http://frontend:3000
 }
