@@ -5,6 +5,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { useUserStore } from '@/stores/user'
+import router from '@/router'
 
 const { registerUser } = useAuth()
 
@@ -65,9 +67,12 @@ const handleSubmit = async () => {
 
   isSubmitting.value = true
 
-  await registerUser(form.username, form.email, form.password)
+  let response = await registerUser(form.username, form.email, form.password)
+  useUserStore().login(response.name, response.email, false, response.uuid)
 
   isSubmitting.value = false
+
+  router.push('/projects')
 }
 
 // Background animation

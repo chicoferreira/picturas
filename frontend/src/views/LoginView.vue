@@ -5,8 +5,10 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth'
+import { useUserStore } from '@/stores/user'
+import router from '@/router'
 
-const { loginUser } = useAuth()
+const { loginUser, getUser } = useAuth()
 
 interface FormData {
   email: string
@@ -45,6 +47,11 @@ const validateForm = (): boolean => {
     isValid = false
   }
 
+  if (form.password.length < 8) {
+    errors.password = 'Password must be at least 8 characters'
+    isValid = false
+  }
+
   return isValid
 }
 
@@ -53,9 +60,24 @@ const handleSubmit = async () => {
 
   isSubmitting.value = true
 
-  await loginUser(form.email, form.password)
+  try {
+    await loginUser(form.email, form.password);
 
-  isSubmitting.value = false
+    const response = await getUser();
+
+    useUserStore().login(
+      response.name,
+      response.email,
+      response.premium,
+      response.uuid
+    );
+
+    router.push('/projects');
+  } catch (error) {
+    console.error('Login process failed:', error);
+  } finally {
+    isSubmitting.value = false;
+  }
 }
 
 // Background animation

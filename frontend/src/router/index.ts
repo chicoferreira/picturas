@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-/*import { useSessionStorage} from "@/stores/sessionStorage"; */
+import { useUserStore } from '@/stores/user'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -13,6 +13,7 @@ const router = createRouter({
       path: '/register',
       name: 'Register',
       component: () => import('../views/CreateAccount.vue'),
+      meta: { requiresAuth: false }
     },
     {
       path: '/login',
@@ -44,6 +45,7 @@ const router = createRouter({
       path: '/projects',
       name: 'Projects',
       component: () => import('../views/ProjectsView.vue'),
+      meta: { requiresAuth: true },
     },
     //{
     //  path: '/forms',
@@ -54,8 +56,25 @@ const router = createRouter({
       path: '/settings',
       name: 'Settings',
       component: () => import('../views/SettingsPage.vue'),
+      meta: { requiresAuth: true },
     },
   ],
 })
+
+router.beforeEach((to, from, next) => {
+  const userStore = useUserStore();
+
+  // Block logged-in users from accessing the login and register pages
+  if ((to.name === 'Login' || to.name === 'Register') && userStore.loggedIn()) {
+    next({ name: 'home' }); // Redirect logged-in users to the Home page
+  }
+  // Check if the route requires authentication
+  else if (to.meta.requiresAuth && !userStore.loggedIn()) {
+    next({ name: 'Login' }); // Redirect non-logged-in users to the Login page
+  } else {
+    // Otherwise, allow access
+    next();
+  }
+});
 
 export default router
