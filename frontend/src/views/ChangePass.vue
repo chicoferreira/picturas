@@ -173,11 +173,6 @@ onUnmounted(() => {
             >
               {{ isSubmitting ? 'Logging in...' : 'Change Password' }}
             </Button>
-            <p class="text-sm text-[#969696]">
-              <router-link to="/login" class="text-[#969696] hover:underline">
-                Already have an account??
-              </router-link>
-            </p>
           </form>
         </CardContent>
       </Card>
