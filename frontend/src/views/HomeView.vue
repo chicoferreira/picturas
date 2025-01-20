@@ -128,12 +128,25 @@ const animateBackground = () => {
             </p>
           </div>
         </div>
-
         <div v-else>
           <form @submit.prevent="handleLogin" class="space-y-4">
-            <Input type="email" placeholder="Email" v-model="email" required />
-            <Input type="password" placeholder="Password" v-model="password" required />
-            <Button type="submit" class="w-full bg-[#6D28D9] hover:bg-[#5b21b6]"> Login </Button>
+            <Input
+              type="email"
+              class="rounded-2xl"
+              placeholder="Email"
+              v-model="email"
+              required
+            />
+            <Input
+              type="password"
+              class="rounded-2xl"
+              placeholder="Password"
+              v-model="password"
+              required
+            />
+            <Button type="submit" class="w-full bg-[#6D28D9] hover:bg-[#5b21b6]">
+              Login
+            </Button>
           </form>
           <div class="text-center mt-4">
             <p class="text-sm text-[#969696]">

@@ -1,3 +1,4 @@
+use crate::error::AppError;
 use crate::tool::amqp::message::OutputType::Text;
 use crate::tool::amqp::message::ResponseStatus;
 use crate::tool::amqp::rabbit_controller::{RabbitMqConsumer, RabbitMqControllerError};
@@ -86,7 +87,7 @@ async fn send_request_to_rabbitmq(
 pub async fn add_to_queue(
     mut queued_image_apply_tool: QueuedImageApplyTool,
     state: &AppState,
-) -> Result<(), RabbitMqControllerError> {
+) -> Result<(), AppError> {
     let Some((tool_uuid, requested_tool)) = queued_image_apply_tool.missing_tools.pop_front()
     else {
         // no tool to apply
@@ -95,6 +96,10 @@ pub async fn add_to_queue(
 
     let image_input_path = &queued_image_apply_tool.image_input_uri;
     let image_output_path = &queued_image_apply_tool.image_output_uri;
+
+    if let Some(output_folder) = image_output_path.parent() {
+        tokio::fs::create_dir_all(output_folder).await?;
+    }
 
     let message_id =
         send_request_to_rabbitmq(image_input_path, image_output_path, &requested_tool, state)
