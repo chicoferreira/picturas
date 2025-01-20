@@ -67,12 +67,22 @@ const handleSubmit = async () => {
 
   isSubmitting.value = true
 
-  let response = await registerUser(form.username, form.email, form.password)
-  useUserStore().login(response.name, response.email, false, response.uuid)
+  try {
+    const response = await registerUser(form.username, form.email, form.password);
 
-  isSubmitting.value = false
+    useUserStore().login(
+      response.name,
+      response.email,
+      response.false,
+      response.uuid
+    );
 
-  router.push('/projects')
+    router.push('/projects');
+  } catch (error) {
+    console.error('Register process failed:', error);
+  } finally {
+    isSubmitting.value = false;
+  }
 }
 
 // Background animation

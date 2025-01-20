@@ -19,10 +19,15 @@ export function useAuth() {
         return
       }
 
-      alert('Conta registada com sucesso!')
-      router.push('/projects')
+      const data = await response.json();
 
-      return await response.json()
+      document.cookie = `access_token=${data.access_token}; Path=/`;
+      document.cookie = `refresh_token=${data.refresh_token}; Path=/`;
+
+      alert('Register successful!');
+      router.push('/projects')
+      
+      return data;
     } catch (error: any) {
       console.error('Erro ao registar:', error.message)
       alert(`Erro ao registar: ${error.message}`)
