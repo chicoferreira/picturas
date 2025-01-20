@@ -1,5 +1,4 @@
 from sqlalchemy.orm import Session
-from .schemas import ReqSubscription
 from .models import Subscription
 from .database import get_db
 

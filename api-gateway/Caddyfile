@@ -33,5 +33,9 @@ http://localhost {
 		}
 	}
 
+	handle /api/v1/subscriptions* {
+		reverse_proxy http://subscriptions-ms:8020
+	}
+
 	respond "Not found" 404
 }

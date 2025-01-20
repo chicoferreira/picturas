@@ -1,7 +1,8 @@
 from .database import Base
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float
+from sqlalchemy.dialects.postgresql import UUID
 import datetime
-from uuid import UUID
+import uuid
 
 class Subscription(Base):
     __tablename__ = 'subscriptions'
