@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useAuth } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CameraIcon } from 'lucide-vue-next'
+import { useUserStore } from '@/stores/user'
+import router from '@/router'
 
-const { registerUser, loginUser } = useAuth()
+const { registerUser, loginUser, getUser } = useAuth()
 
 const isLogin = ref(false)
 const username = ref('')
@@ -16,14 +18,151 @@ const toggleForm = () => {
   isLogin.value = !isLogin.value
 }
 
+const isSubmitting = ref(false)
+
+interface RegisterFormData {
+  email: string
+  username: string
+  password: string
+}
+
+interface RegisterFormErrors {
+  email?: string
+  username?: string
+  password?: string
+}
+
+const registerForm = reactive<RegisterFormData>({
+  email: '',
+  username: '',
+  password: '',
+})
+
+const errors = reactive<RegisterFormErrors>({})
+
+const validateRegisterForm = (): boolean => {
+  errors.email = ''
+  errors.username = ''
+  errors.password = ''
+
+  let isValid = true
+
+  if (!registerForm.email) {
+    errors.email = 'Email is required'
+    isValid = false
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email)) {
+    errors.email = 'Invalid email format'
+    isValid = false
+  }
+
+  if (!registerForm.username) {
+    errors.username = 'Username is required'
+    isValid = false
+  }
+
+  if (!registerForm.password) {
+    errors.password = 'Password is required'
+    isValid = false
+  } else if (registerForm.password.length < 8) {
+    errors.password = 'Password must be at least 8 characters'
+    isValid = false
+  }
+
+  return isValid
+}
+
 const handleRegister = async () => {
-  await registerUser(username.value, email.value, password.value)
-  toggleForm()
+  if (!validateRegisterForm()) return
+
+  isSubmitting.value = true
+
+  try {
+    const response = await registerUser(registerForm.username, registerForm.email, registerForm.password);
+
+    useUserStore().login(
+      response.name,
+      response.email,
+      false,
+      response.uuid
+    );
+
+    router.push('/projects');
+  } catch (error) {
+    console.error('Register process failed:', error);
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+
+interface LoginFormData {
+  email: string
+  password: string
+}
+
+interface LoginFormErrors {
+  email?: string
+  password?: string
+}
+
+const loginForm = reactive<LoginFormData>({
+  email: '',
+  password: '',
+})
+
+const loginErrors = reactive<LoginFormErrors>({})
+
+const validateLoginForm = (): boolean => {
+  loginErrors.email = ''
+  loginErrors.password = ''
+
+  console.log(loginForm.email, loginForm.password)
+
+  let isValid = true
+
+  if (!loginForm.email) {
+    loginErrors.email = 'Email is required'
+    isValid = false
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginForm.email)) {
+    loginErrors.email = 'Invalid email format'
+    isValid = false
+  }
+
+  if (!loginForm.password) {
+    loginErrors.password = 'Password is required'
+    isValid = false
+  }
+
+  if (loginForm.password.length < 8) {
+    loginErrors.password = 'Password must be at least 8 characters'
+    isValid = false
+  }
+  console.log(loginErrors)
+  return isValid
 }
 
 const handleLogin = async () => {
-  await loginUser(email.value, password.value)
-  toggleForm()
+  if (!validateLoginForm()) return
+
+  isSubmitting.value = true
+
+  try {
+    await loginUser(loginForm.email, loginForm.password);
+
+    const response = await getUser();
+
+    useUserStore().login(
+      response.name,
+      response.email,
+      false,
+      response.uuid
+    );
+
+    router.push('/projects');
+  } catch (error) {
+    console.error('Login process failed:', error);
+  } finally {
+    isSubmitting.value = false;
+  }
 }
 
 onMounted(() => {
@@ -91,7 +230,7 @@ const animateBackground = () => {
         </p>
       </div>
 
-      <div class="bg-[#0f1629] p-8 rounded-3xl shadow-xl w-full max-w-md">
+      <div v-if="!useUserStore().loggedIn()" class="bg-[#0f1629] p-8 rounded-3xl shadow-xl w-full max-w-md">
         <div class="flex items-center justify-center mb-6">
           <CameraIcon class="w-12 h-12 text-[#6D28D9]" />
           <span
@@ -106,15 +245,20 @@ const animateBackground = () => {
               type="text "
               class="rounded-2xl"
               placeholder="Username"
-              v-model="username"
+              v-model="registerForm.username"
               required
             />
-            <Input type="email" class="rounded-2xl" placeholder="Email" v-model="email" required />
+            <Input type="email"
+              class="rounded-2xl"
+              placeholder="Email" 
+              v-model="registerForm.email" 
+              required 
+            />
             <Input
               type="password"
               class="rounded-2xl"
               placeholder="Password"
-              v-model="password"
+              v-model="registerForm.password"
               required
             />
             <Button type="submit" class="w-full rounded-3xl bg-[#6D28D9] hover:bg-[#5b21b6]">
@@ -134,14 +278,14 @@ const animateBackground = () => {
               type="email"
               class="rounded-2xl"
               placeholder="Email"
-              v-model="email"
+              v-model="loginForm.email"
               required
             />
             <Input
               type="password"
               class="rounded-2xl"
               placeholder="Password"
-              v-model="password"
+              v-model="loginForm.password"
               required
             />
             <Button type="submit" class="w-full bg-[#6D28D9] hover:bg-[#5b21b6]">

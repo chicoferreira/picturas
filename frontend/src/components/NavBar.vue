@@ -9,7 +9,6 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
-const loggedIn = useUserStore()
 
 const router = useRouter()
 
@@ -20,25 +19,26 @@ const links = router.options.routes.map((route) => ({
 
 // Filtrar links
 const menuLinks = links.filter((link) => {
-  if (!loggedIn) {
+  if (!useUserStore().loggedIn()) {
     // Excluir rotas para utilizadores não autenticados
     return (
       link.name !== 'home' &&
       link.name !== 'Settings' &&
       link.name !== 'TestePage' &&
       link.name !== 'ResetPassword' &&
-      link.name !== 'Projects'
+      link.name !== 'Projects' &&
+      link.name !== 'Subscriptions'
     )
-  }
-  // Excluir rotas para todos os utilizadores
-  return (
-    link.name !== 'TestePage' &&
-    link.name !== 'Register' &&
-    link.name !== 'Login' &&
-    link.name !== 'ResetPassword' &&
-    link.name !== 'home'
-  )
-})
+  } else {
+    // Excluir rotas utilizadores autenticados
+    return (
+      link.name !== 'TestePage' &&
+      link.name !== 'Register' &&
+      link.name !== 'Login' &&
+      link.name !== 'home' && 
+      link.name !== 'ResetPassword'
+    )
+  }})
 </script>
 
 <template>
