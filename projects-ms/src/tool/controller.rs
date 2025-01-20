@@ -250,10 +250,10 @@ pub async fn load_image_versions_zip(
 
     for image_version in image_versions {
         let image_path = image_version.get_uri(state);
-        let image_data: Vec<u8> = tokio::fs::read(image_path).await?;
-
-        zip.start_file(format!("{}.png", image_version.id), options)?;
-        zip.write_all(&image_data)?;
+        if let Ok(image_data) = tokio::fs::read(image_path).await {
+            zip.start_file(format!("{}.png", image_version.id), options)?;
+            zip.write_all(&image_data)?;
+        }
     }
 
     zip.finish()?;
