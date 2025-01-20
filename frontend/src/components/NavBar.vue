@@ -5,7 +5,6 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
 } from '@/components/ui/navigation-menu'
-import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
@@ -24,7 +23,6 @@ const menuLinks = links.filter((link) => {
     return (
       link.name !== 'home' &&
       link.name !== 'Settings' &&
-      link.name !== 'TestePage' &&
       link.name !== 'ResetPassword' &&
       link.name !== 'Projects' &&
       link.name !== 'Subscriptions'
@@ -32,10 +30,9 @@ const menuLinks = links.filter((link) => {
   } else {
     // Excluir rotas utilizadores autenticados
     return (
-      link.name !== 'TestePage' &&
       link.name !== 'Register' &&
       link.name !== 'Login' &&
-      link.name !== 'home' && 
+      link.name !== 'home' &&
       link.name !== 'ResetPassword'
     )
   }})
