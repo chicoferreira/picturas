@@ -82,7 +82,38 @@ export function useAuth() {
       alert(`Error obtaining user: ${error.message}`);
       throw error;
     }
-  };  
+  };
 
-  return { registerUser, loginUser, getUser }
+  const changePassword = async (current_password: string, new_password: string) => {
+    try {
+      const response = await fetch('http://localhost:80/api/v1/users/changepassword', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ current_password, new_password }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to change password');
+      }
+
+      const data = await response.json();
+
+      document.cookie = `access_token=${data.access_token}; Path=/`;
+      document.cookie = `refresh_token=${data.refresh_token}; Path=/`;
+
+      alert('Password changed successfully!');
+
+      return data;
+    } catch (error: any) {
+      console.error('Error changing password:', error.message);
+      alert(`Error changing password: ${error.message}`);
+      throw error;
+    }
+  }
+
+  return { registerUser, loginUser, getUser, changePassword }
 }
