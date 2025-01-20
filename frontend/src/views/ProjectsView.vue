@@ -1,3 +1,75 @@
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { SearchIcon, UploadIcon, PencilIcon } from 'lucide-vue-next'
+import { useUserStore } from '@/stores/user'
+
+interface Project {
+  id: number
+  name: string
+  image: string
+  lastEdited: number
+}
+
+const router = useRouter()
+const searchQuery = ref('')
+const dragActive = ref(false)
+const selectedProject = ref<Project | null>(null)
+const userStore = useUserStore()
+
+const userName = computed(() => userStore.name)
+const userEmail = computed(() => userStore.email)
+
+const projects = ref<Project[]>([
+  {
+    id: 1,
+    name: 'Mountain Landscape',
+    image: '/placeholder.svg?height=400&width=600',
+    lastEdited: 367,
+  },
+  {
+    id: 2,
+    name: 'Portrait Session',
+    image: '/placeholder.svg?height=400&width=600',
+    lastEdited: 368,
+  },
+  {
+    id: 3,
+    name: 'City Nightscape',
+    image: '/placeholder.svg?height=400&width=600',
+    lastEdited: 369,
+  },
+])
+
+const filteredProjects = computed(() => {
+  let filtered = projects.value
+
+  if (selectedProject.value) {
+    filtered = filtered.filter((p) => p.id === selectedProject.value?.id)
+  } else if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter((p) => p.name.toLowerCase().includes(query))
+  }
+
+  return filtered
+})
+
+const selectProject = (project: Project) => {
+  selectedProject.value = selectedProject.value?.id === project.id ? null : project
+}
+
+const handleDrop = (event: DragEvent) => {
+  dragActive.value = false
+  const files = event.dataTransfer?.files
+  if (files && files.length > 0) {
+    // Handle file upload and project creation
+    console.log('File dropped:', files[0])
+  }
+}
+</script>
 <template>
   <div class="min-h-screen bg-[#030712] flex">
     <!-- Sidebar -->
@@ -9,8 +81,8 @@
           <AvatarFallback class="bg-white text-[#030712]">JD</AvatarFallback>
         </Avatar>
         <div class="flex flex-col">
-          <span class="text-white">JMF</span>
-          <span class="text-sm text-[#969696]">jmf@email.com</span>
+          <span class="text-white">{{ userName }}</span>
+          <span class="text-sm text-[#969696]">{{ userEmail }}</span>
         </div>
       </div>
 
@@ -111,71 +183,3 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { SearchIcon, UploadIcon, PencilIcon } from 'lucide-vue-next'
-
-interface Project {
-  id: number
-  name: string
-  image: string
-  lastEdited: number
-}
-
-const router = useRouter()
-const searchQuery = ref('')
-const dragActive = ref(false)
-const selectedProject = ref<Project | null>(null)
-
-const projects = ref<Project[]>([
-  {
-    id: 1,
-    name: 'Mountain Landscape',
-    image: '/placeholder.svg?height=400&width=600',
-    lastEdited: 367,
-  },
-  {
-    id: 2,
-    name: 'Portrait Session',
-    image: '/placeholder.svg?height=400&width=600',
-    lastEdited: 368,
-  },
-  {
-    id: 3,
-    name: 'City Nightscape',
-    image: '/placeholder.svg?height=400&width=600',
-    lastEdited: 369,
-  },
-])
-
-const filteredProjects = computed(() => {
-  let filtered = projects.value
-
-  if (selectedProject.value) {
-    filtered = filtered.filter((p) => p.id === selectedProject.value?.id)
-  } else if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter((p) => p.name.toLowerCase().includes(query))
-  }
-
-  return filtered
-})
-
-const selectProject = (project: Project) => {
-  selectedProject.value = selectedProject.value?.id === project.id ? null : project
-}
-
-const handleDrop = (event: DragEvent) => {
-  dragActive.value = false
-  const files = event.dataTransfer?.files
-  if (files && files.length > 0) {
-    // Handle file upload and project creation
-    console.log('File dropped:', files[0])
-  }
-}
-</script>

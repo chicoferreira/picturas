@@ -39,6 +39,12 @@ const menuLinks = links.filter((link) => {
       link.name !== 'ResetPassword'
     )
   }})
+
+const viewLogout = () => {
+  useUserStore().logout()
+  router.push('/')
+}
+
 </script>
 
 <template>
@@ -54,6 +60,9 @@ const menuLinks = links.filter((link) => {
         <NavigationMenuList class="flex items-center">
             <NavigationMenuItem v-for="link in menuLinks" :key="link.name">
                 <NavigationMenuLink :href="link.href">{{ link.name }}</NavigationMenuLink>
+            </NavigationMenuItem>
+            <NavigationMenuItem v-if="useUserStore().loggedIn()">
+                <NavigationMenuLink @click="viewLogout()">Logout</NavigationMenuLink>
             </NavigationMenuItem>
         </NavigationMenuList>
     </NavigationMenu>
