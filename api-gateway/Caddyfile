@@ -4,7 +4,7 @@
 	auto_https off
 }
 
-http://localhost {
+http:// {
 	handle /api/v1/users* {
 		@options method OPTIONS
 		respond @options "OK" 200
