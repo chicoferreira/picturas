@@ -96,7 +96,7 @@ async function getProjectImages(projectId: string): Promise<string | undefined> 
 
 async function loadProjects() {
   try {
-    const response = await authFetch(API_BASE + '/api/v1/projects', {
+    const response = await authFetch(API_BASE + '/projects', {
       method: 'GET',
       credentials: 'include',
     })
@@ -130,7 +130,7 @@ async function createNewProject() {
   if (!name) return
 
   try {
-    const response = await authFetch(API_BASE + '/api/v1/projects', {
+    const response = await authFetch(API_BASE + '/projects', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
