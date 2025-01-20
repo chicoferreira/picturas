@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth'
 
-
 const { loginUser } = useAuth()
 
 interface FormData {
@@ -77,7 +76,7 @@ const animateBackground = () => {
       y: Math.random() * canvas.height,
       size: Math.random() * 5 + 1,
       speedX: Math.random() * 3 - 1.5,
-      speedY: Math.random() * 3 - 1.5
+      speedY: Math.random() * 3 - 1.5,
     })
   }
 
@@ -122,7 +121,6 @@ onUnmounted(() => {
   <div class="min-h-screen flex flex-col items-center justify-center bg-[#030712] p-6 relative">
     <canvas id="bgCanvas" class="absolute inset-0 z-0"></canvas>
     <div class="w-full max-w-md space-y-8 relative z-10">
-    
       <div class="text-center">
         <h1
           class="text-5xl font-bold bg-gradient-to-r from-[#6D28D9] to-white bg-clip-text text-transparent tracking-tight"
@@ -137,13 +135,26 @@ onUnmounted(() => {
             Change your password
           </CardTitle>
           <CardDescription class="text-[#969696] text-center">
-           Enter a new password
+            Enter a new password
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form @submit.prevent="handleSubmit" class="space-y-4">
             <div class="space-y-2">
-              <Label for="password" class="text-white">Password</Label>
+              <Label for="password" class="text-white">Old Password</Label>
+              <Input
+                v-model="form.password"
+                id="password"
+                type="password"
+                required
+                :class="{ 'border-red-500': errors.password }"
+                class="bg-transparent text-white border-gray-800 rounded-2xl"
+              />
+              <p v-if="errors.password" class="text-sm text-red-500">{{ errors.password }}</p>
+            </div>
+
+            <div class="space-y-2">
+              <Label for="password" class="text-white">New Password</Label>
               <Input
                 v-model="form.password"
                 id="password"
@@ -160,7 +171,7 @@ onUnmounted(() => {
               :disabled="isSubmitting"
               class="w-full bg-[#6D28D9] hover:bg-[#5b21b6] transition-colors rounded-3xl"
             >
-              {{ isSubmitting ? 'Logging in...' : 'Login' }}
+              {{ isSubmitting ? 'Logging in...' : 'Change Password' }}
             </Button>
             <p class="text-sm text-[#969696]">
               <router-link to="/login" class="text-[#969696] hover:underline">
@@ -173,5 +184,3 @@ onUnmounted(() => {
     </div>
   </div>
 </template>
-
-
