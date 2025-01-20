@@ -54,8 +54,6 @@ export const useUserStore = defineStore('counter', () => {
 
   function loggedIn() {
     // TODO: implementar a validação do token
-    console.log(name, email, uuid)
-    console.log(name.value !== '' && email.value !== '' && uuid.value !== '')
     return /*token.value !== '' && */name.value !== '' && email.value !== '' && uuid.value !== ''
   }
 

@@ -7,16 +7,11 @@ import {
 } from '@/components/ui/navigation-menu'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+
+const loggedIn = useUserStore()
 
 const router = useRouter()
-
-var isLoggedIn = ref(false)
-
-
-const toggleForm = () => {
-  isLoggedIn.value = !isLoggedIn.value
-}
-
 
 const links = router.options.routes.map((route) => ({
   name: route.name,
@@ -25,7 +20,7 @@ const links = router.options.routes.map((route) => ({
 
 // Filtrar links
 const menuLinks = links.filter((link) => {
-  if (!isLoggedIn.value) {
+  if (!loggedIn) {
     // Excluir rotas para utilizadores não autenticados
     return (
       link.name !== 'home' &&
@@ -40,7 +35,8 @@ const menuLinks = links.filter((link) => {
     link.name !== 'TestePage' &&
     link.name !== 'Register' &&
     link.name !== 'Login' &&
-    link.name !== 'ResetPassword'
+    link.name !== 'ResetPassword' &&
+    link.name !== 'home'
   )
 })
 </script>
