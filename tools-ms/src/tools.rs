@@ -44,6 +44,8 @@ impl Tool {
 }
 
 fn crop(image: PhotonImage, x1: u32, x2: u32, y1: u32, y2: u32) -> PhotonImage {
+    let (x1, x2) = (x1.min(x2), x1.max(x2));
+    let (y1, y2) = (y1.min(y2), y1.max(y2));
     photon_rs::transform::crop(&image, x1, x2, y1, y2)
 }
 
