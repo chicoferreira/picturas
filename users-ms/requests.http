@@ -1,0 +1,27 @@
+### Register user
+POST http://localhost/api/v1/users/register
+Content-Type: application/json
+
+{
+  "name": "chico",
+  "email": "mail@chicoferreira.com",
+  "password": "12345678"
+}
+
+### Login user
+POST http://localhost/api/v1/users/login
+Content-Type: application/json
+
+{
+  "email": "mail@chicoferreira.com",
+  "password": "12345678"
+}
+
+### Refresh token
+POST http://localhost/api/v1/users/refresh
+
+### Get user
+GET http://localhost/api/v1/users/me
+
+### Logout user
+POST http://localhost/api/v1/users/logout

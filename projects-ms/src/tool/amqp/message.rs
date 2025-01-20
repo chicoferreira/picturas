@@ -16,9 +16,9 @@ pub struct RequestMessage {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResponseMessage {
-    pub message_id: Uuid,
+    pub message_id: String,
     pub correlation_id: Uuid,
-    pub timestamp: DateTime<Utc>,
+    pub timestamp: String,
     #[serde(flatten)]
     pub status: ResponseStatus,
     pub metadata: Metadata,

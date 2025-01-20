@@ -1,9 +1,12 @@
 use crate::error::Result;
+use crate::image::model::Image;
 use crate::tool::model::{ImageVersion, RequestedTool, Tool};
 use crate::tool::queue;
 use crate::tool::queue::QueuedImageApplyTool;
-use crate::{config, image, AppState};
+use crate::{config, AppState};
+use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
+use std::io::Write;
 use tracing::{debug, info};
 use uuid::Uuid;
 
@@ -139,24 +142,26 @@ pub async fn update_tools(
     Ok(result)
 }
 
-pub async fn apply_added_tools(project_uuid: Uuid, state: &AppState) -> Result<()> {
+pub async fn apply_added_tools(
+    project_uuid: Uuid,
+    user_uuid: Uuid,
+    images: &[Image],
+    state: &AppState,
+) -> Result<()> {
     delete_image_versions(project_uuid, state).await?;
 
-    let (images, tools) = tokio::join!(
-        image::controller::get_original_images(project_uuid, state),
-        get_applied_tools(project_uuid, state)
-    );
+    let tools = get_applied_tools(project_uuid, state).await;
 
     let requested_tools: VecDeque<(Uuid, RequestedTool)> = tools?
         .into_iter()
         .filter_map(|tool| Some((tool.id, tool.try_into().ok()?)))
         .collect();
 
-    for image in images? {
+    for image in images {
         let image_input_uri = image.get_uri(state);
-
         let queued_image_apply_tool = QueuedImageApplyTool::new_generate_output_uri(
             project_uuid,
+            user_uuid,
             image.id,
             image_input_uri,
             requested_tools.clone(),
@@ -168,6 +173,23 @@ pub async fn apply_added_tools(project_uuid: Uuid, state: &AppState) -> Result<(
     }
 
     Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ImageVersionWithUrl {
+    #[serde(flatten)]
+    image_version: ImageVersion,
+    url: String,
+}
+
+impl ImageVersionWithUrl {
+    pub fn from_image_version(image_version: ImageVersion, state: &AppState) -> Self {
+        let url = format!(
+            "{}/api/v1/projects/{}/tools/images/{}",
+            state.config.picturas_public_url, image_version.project_id, image_version.id
+        );
+        Self { url, image_version }
+    }
 }
 
 pub async fn save_image_version(image_version: &ImageVersion, state: &AppState) -> Result<()> {
@@ -204,4 +226,37 @@ pub async fn load_image_version(
     let image_data = tokio::fs::read(image_path).await?;
 
     Ok(image_data)
+}
+
+pub async fn load_image_versions_zip(
+    project_id: Uuid,
+    tool_id: Uuid,
+    state: &AppState,
+) -> Result<Vec<u8>> {
+    let image_versions = sqlx::query_as!(
+        ImageVersion,
+        "SELECT id, original_image_id, project_id, tool_id, text_result, created_at FROM image_versions WHERE project_id = $1 AND tool_id = $2",
+        project_id,
+        tool_id
+    )
+        .fetch_all(&state.db_pool)
+        .await?;
+
+    let mut buffer = Vec::new();
+    let mut zip = zip::ZipWriter::new(std::io::Cursor::new(&mut buffer));
+
+    let options = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated);
+
+    for image_version in image_versions {
+        let image_path = image_version.get_uri(state);
+        let image_data: Vec<u8> = tokio::fs::read(image_path).await?;
+
+        zip.start_file(format!("{}.png", image_version.id), options)?;
+        zip.write_all(&image_data)?;
+    }
+
+    zip.finish()?;
+
+    Ok(buffer)
 }

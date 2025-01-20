@@ -1,0 +1,23 @@
+include:
+  - tools-ms/docker-compose.yml
+  - projects-ms/docker-compose.yml
+  - users-ms/docker-compose.yml
+  - bg-remover-tool-ms/docker-compose.yml
+  - watermark-tool-ms/docker-compose.yml
+  - api-gateway/docker-compose.yml
+
+networks:
+  picturas-network:
+
+volumes:
+  images:
+
+secrets:
+  refresh_token_private_key:
+    file: ./keys/refresh.key
+  refresh_token_public_key:
+    file: ./keys/refresh.key.pub
+  access_token_private_key:
+    file: ./keys/access.key
+  access_token_public_key:
+    file: ./keys/access.key.pub

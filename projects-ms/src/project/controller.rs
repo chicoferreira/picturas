@@ -1,18 +1,17 @@
 use crate::error::{AppError, Result};
 use crate::project::model::Project;
-use crate::user::User;
 use crate::AppState;
 use chrono::Utc;
 use tracing::info;
 use uuid::Uuid;
 
-pub async fn create_project(owner: User, name: String, state: AppState) -> Result<Project> {
+pub async fn create_project(owner: Uuid, name: String, state: AppState) -> Result<Project> {
     info!("Creating project with name: {}", name);
     let now = Utc::now();
     let project = Project {
         id: Uuid::new_v4(),
         name,
-        user_id: owner.uuid,
+        user_id: owner,
         created_at: now,
         updated_at: now,
     };
@@ -30,6 +29,21 @@ pub async fn create_project(owner: User, name: String, state: AppState) -> Resul
 
     info!("Project created with ID: {}", project.id);
     Ok(project)
+}
+
+pub async fn get_projects(user: Uuid, state: AppState) -> Result<Vec<Project>> {
+    info!("Fetching projects for user with ID: {}", user);
+    let projects = sqlx::query_as!(
+        Project,
+        "SELECT id, name, user_id, created_at, updated_at FROM projects WHERE user_id = $1",
+        user
+    )
+    .fetch_all(&state.db_pool)
+    .await
+    .map_err(|_| AppError::EntityNotFound)?;
+
+    info!("Fetched projects for user with ID: {}", user);
+    Ok(projects)
 }
 
 pub async fn get_project(project_id: Uuid, state: AppState) -> Result<Project> {
@@ -55,4 +69,15 @@ pub async fn delete_project(project_id: Uuid, state: AppState) -> Result<()> {
 
     info!("Deleted project with ID: {}", project_id);
     Ok(())
+}
+
+pub async fn can_modify(project_id: Uuid, user_id: Uuid, state: &AppState) -> Result<bool> {
+    Ok(sqlx::query!(
+        "SELECT id FROM projects WHERE id = $1 AND user_id = $2",
+        project_id,
+        user_id
+    )
+    .fetch_optional(&state.db_pool)
+    .await?
+    .is_some())
 }

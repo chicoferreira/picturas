@@ -3,27 +3,21 @@ mod error;
 mod image;
 mod project;
 mod router;
+mod state;
 mod tool;
 mod user;
 
 use crate::config::Config;
+use crate::state::AppState;
 use crate::tool::amqp::rabbit_controller::RabbitMqController;
-use crate::tool::queue::QueuedImageApplyTool;
 use clap::Parser;
-use dashmap::DashMap;
 use sqlx::postgres::PgConnectOptions;
 use sqlx::PgPool;
+use std::net::IpAddr;
+use std::str::FromStr;
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
-use uuid::Uuid;
-
-#[derive(Clone)]
-struct AppState {
-    db_pool: PgPool,
-    config: Arc<Config>,
-    rabbit_mq_controller: Arc<RabbitMqController>,
-    queued_tools: Arc<DashMap<Uuid, (Uuid, QueuedImageApplyTool)>>, // queue_uuid, (current_tool_uuid, tool)
-}
+use tracing::info;
 
 #[tokio::main]
 async fn main() {
@@ -36,13 +30,18 @@ async fn main() {
         .port(config.pg_port)
         .username(&config.pg_user)
         .password(&config.pg_password)
-        .database("picturas");
+        .database(&config.pg_database);
 
     let pg_pool = PgPool::connect_with(conn)
         .await
         .expect("Failed to connect to Postgres.");
 
-    let bind_address = &config.picturas_bind_address;
+    sqlx::migrate!()
+        .run(&pg_pool)
+        .await
+        .expect("Failed to run migrations");
+
+    let bind_address = (IpAddr::from_str(&config.bind_ip).unwrap(), config.bind_port);
     let listener = tokio::net::TcpListener::bind(bind_address).await.unwrap();
 
     let rabbit_mq_controller = RabbitMqController::new(8, &config).await;
@@ -52,9 +51,12 @@ async fn main() {
         config: Arc::new(config),
         rabbit_mq_controller: Arc::new(rabbit_mq_controller),
         queued_tools: Default::default(),
+        connected_ws_clients: Default::default(),
     };
 
     let rabbit_mq_consumer = state.rabbit_mq_controller.create_consumer(&state).await;
+
+    info!("Starting server at {}:{}", bind_address.0, bind_address.1);
 
     tokio::select! {
         _ = tool::queue::run_rabbit_mq_results_read_loop(rabbit_mq_consumer, state.clone()) => {}

@@ -1,40 +1,49 @@
 use crate::error::AppError;
+use crate::error::Result;
+use crate::state::AppState;
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
+use axum_extra::extract::CookieJar;
+use chrono::Utc;
+use jsonwebtoken::{Algorithm, Validation};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// This user will be extracted from the request headers.
-pub struct User {
-    pub uuid: Uuid,
-    pub name: String,
-    pub email: String,
-}
-
-impl<S: Sync + Send> FromRequestParts<S> for User {
+impl FromRequestParts<AppState> for AccessTokenClaims {
     type Rejection = AppError;
 
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        const HEADER_ID: &str = "x-user-id";
-        const HEADER_NAME: &str = "x-user-name";
-        const HEADER_EMAIL: &str = "x-user-email";
-
-        let get_header = |key: &'static str| -> Result<&str, AppError> {
-            parts
-                .headers
-                .get(key)
-                .and_then(|value| value.to_str().ok())
-                .ok_or(AppError::MissingHeader(key))
-        };
-
-        let id_str = get_header(HEADER_ID)?;
-        let id = Uuid::parse_str(id_str).map_err(|_| AppError::InvalidUuid(id_str.to_string()))?;
-        let name = get_header(HEADER_NAME)?.to_string();
-        let email = get_header(HEADER_EMAIL)?.to_string();
-
-        Ok(User {
-            uuid: id,
-            name,
-            email,
-        })
+    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self> {
+        CookieJar::from_headers(&parts.headers)
+            .get("access_token")
+            .ok_or(AppError::Unauthorized)
+            .and_then(|cookie| {
+                let token = cookie.value();
+                let token = decode_access_token(state, token)?;
+                Ok(token)
+            })
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AccessTokenClaims {
+    pub sub: Uuid,
+    pub name: String,
+    pub email: String,
+    pub exp: i64,
+}
+
+pub fn decode_access_token(state: &AppState, token: &str) -> Result<AccessTokenClaims> {
+    let key = &state.config.access_token_public_key;
+    let token: AccessTokenClaims =
+        jsonwebtoken::decode(token, key, &Validation::new(Algorithm::RS256))?.claims;
+    validate_expiration_date(token.exp)?;
+    Ok(token)
+}
+
+fn validate_expiration_date(expiration: i64) -> Result<()> {
+    let now = Utc::now().timestamp();
+    if now > expiration {
+        return Err(AppError::Unauthorized);
+    }
+    Ok(())
 }

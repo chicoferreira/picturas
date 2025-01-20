@@ -57,6 +57,8 @@ async fn main() {
         "amqp://{}:{}@{}:{}",
         config.rabbitmq_user, config.rabbitmq_password, config.rabbitmq_host, config.rabbitmq_port
     );
+    
+    info!("Connecting to RabbitMQ at {:?}", amqp_uri);
 
     let conn = Connection::connect(&amqp_uri, Default::default())
         .await
