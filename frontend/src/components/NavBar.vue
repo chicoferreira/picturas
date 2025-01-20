@@ -5,18 +5,12 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
 } from '@/components/ui/navigation-menu'
-import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { useAuth } from '@/lib/auth'
 
 const router = useRouter()
-
-var isLoggedIn = ref(false)
-
-
-const toggleForm = () => {
-  isLoggedIn.value = !isLoggedIn.value
-}
-
+const { logoutUser } = useAuth()
 
 const links = router.options.routes.map((route) => ({
   name: route.name,
@@ -25,24 +19,33 @@ const links = router.options.routes.map((route) => ({
 
 // Filtrar links
 const menuLinks = links.filter((link) => {
-  if (!isLoggedIn.value) {
+  if (!useUserStore().loggedIn()) {
     // Excluir rotas para utilizadores não autenticados
     return (
       link.name !== 'home' &&
       link.name !== 'Settings' &&
-      link.name !== 'TestePage' &&
       link.name !== 'ResetPassword' &&
-      link.name !== 'Projects'
+      link.name !== 'Projects' &&
+      link.name !== 'Subscriptions' &&
+      link.name !== 'ProjectView'
     )
-  }
-  // Excluir rotas para todos os utilizadores
-  return (
-    link.name !== 'TestePage' &&
-    link.name !== 'Register' &&
-    link.name !== 'Login' &&
-    link.name !== 'ResetPassword'
-  )
-})
+  } else {
+    // Excluir rotas utilizadores autenticados
+    return (
+      link.name !== 'Register' &&
+      link.name !== 'Login' &&
+      link.name !== 'home' &&
+      link.name !== 'ResetPassword' &&
+      link.name !== 'ProjectView'
+    )
+  }})
+
+const viewLogout = () => {
+  useUserStore().logout()
+  logoutUser()
+  router.push('/')
+}
+
 </script>
 
 <template>
@@ -58,6 +61,9 @@ const menuLinks = links.filter((link) => {
         <NavigationMenuList class="flex items-center">
             <NavigationMenuItem v-for="link in menuLinks" :key="link.name">
                 <NavigationMenuLink :href="link.href">{{ link.name }}</NavigationMenuLink>
+            </NavigationMenuItem>
+            <NavigationMenuItem v-if="useUserStore().loggedIn()">
+                <NavigationMenuLink @click="viewLogout()">Logout</NavigationMenuLink>
             </NavigationMenuItem>
         </NavigationMenuList>
     </NavigationMenu>

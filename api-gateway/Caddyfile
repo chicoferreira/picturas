@@ -37,5 +37,5 @@ http://localhost {
 		reverse_proxy http://subscriptions-ms:8020
 	}
 
-	respond "Not found" 404
+	reverse_proxy http://frontend:3000
 }

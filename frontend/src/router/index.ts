@@ -5,22 +5,6 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: '/teste',
-      name: 'TestePage',
-      component: () => import('../views/TesteHomeView.vue'),
-    },
-    {
-      path: '/register',
-      name: 'Register',
-      component: () => import('../views/CreateAccount.vue'),
-      meta: { requiresAuth: false },
-    },
-    {
-      path: '/login',
-      name: 'Login',
-      component: () => import('../views/LoginView.vue'),
-    },
-    {
       path: '/about',
       name: 'about',
       // route level code-splitting
@@ -56,6 +40,12 @@ const router = createRouter({
       path: '/settings',
       name: 'Settings',
       component: () => import('../views/SettingsPage.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/project/:id',
+      name: 'ProjectView',
+      component: () => import('../views/ImageEditor.vue'),
       meta: { requiresAuth: true },
     },
     {

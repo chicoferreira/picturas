@@ -5,43 +5,47 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth'
+import router from '@/router'
 
-const { loginUser } = useAuth()
+const { changePassword } = useAuth()
 
 interface FormData {
-  email: string
-  password: string
+  oldPassword: string
+  newPassword: string
 }
 
 interface FormErrors {
-  email?: string
-  password?: string
+  oldPassword: string
+  newPassword: string
 }
 
 const form = reactive<FormData>({
-  email: '',
-  password: '',
+  oldPassword: '',
+  newPassword: ''
 })
 
-const errors = reactive<FormErrors>({})
+const errors = reactive<FormErrors>({
+  oldPassword: '',
+  newPassword: ''
+})
 const isSubmitting = ref(false)
 
 const validateForm = (): boolean => {
-  errors.email = ''
-  errors.password = ''
+  errors.oldPassword = ''
+  errors.newPassword = ''
 
   let isValid = true
 
-  if (!form.email) {
-    errors.email = 'Email is required'
-    isValid = false
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-    errors.email = 'Invalid email format'
+  if (!form.oldPassword) {
+    errors.oldPassword = 'Old Password is required'
     isValid = false
   }
 
-  if (!form.password) {
-    errors.password = 'Password is required'
+  if (!form.newPassword) {
+    errors.newPassword = 'New Password is required'
+    isValid = false
+  } else if (form.newPassword.length < 8) {
+    errors.newPassword = 'New Password must be at least 8 characters'
     isValid = false
   }
 
@@ -53,9 +57,16 @@ const handleSubmit = async () => {
 
   isSubmitting.value = true
 
-  await loginUser(form.email, form.password)
+  try {
+    await changePassword(form.oldPassword, form.newPassword);
 
-  isSubmitting.value = false
+
+    router.push('/settings');
+  } catch (error) {
+    console.error('Process failed:', error);
+  } finally {
+    isSubmitting.value = false;
+  }
 }
 
 // Background animation
@@ -141,29 +152,29 @@ onUnmounted(() => {
         <CardContent>
           <form @submit.prevent="handleSubmit" class="space-y-4">
             <div class="space-y-2">
-              <Label for="password" class="text-white">Old Password</Label>
+              <Label for="oldPassword" class="text-white">Old Password</Label>
               <Input
-                v-model="form.password"
-                id="password"
+                v-model="form.oldPassword"
+                id="oldPassword"
                 type="password"
                 required
-                :class="{ 'border-red-500': errors.password }"
+                :class="{ 'border-red-500': errors.oldPassword }"
                 class="bg-transparent text-white border-gray-800 rounded-2xl"
               />
-              <p v-if="errors.password" class="text-sm text-red-500">{{ errors.password }}</p>
+              <p v-if="errors.oldPassword" class="text-sm text-red-500">{{ errors.oldPassword }}</p>
             </div>
 
             <div class="space-y-2">
-              <Label for="password" class="text-white">New Password</Label>
+              <Label for="newPassword" class="text-white">New Password</Label>
               <Input
-                v-model="form.password"
-                id="password"
+                v-model="form.newPassword"
+                id="newPassword"
                 type="password"
                 required
-                :class="{ 'border-red-500': errors.password }"
+                :class="{ 'border-red-500': errors.newPassword }"
                 class="bg-transparent text-white border-gray-800 rounded-2xl"
               />
-              <p v-if="errors.password" class="text-sm text-red-500">{{ errors.password }}</p>
+              <p v-if="errors.newPassword" class="text-sm text-red-500">{{ errors.newPassword }}</p>
             </div>
 
             <Button

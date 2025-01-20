@@ -10,13 +10,17 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix",
-    "format": "prettier --write src/"
+    "format": "prettier --write src/",
+    "preview:dist": "vite preview --mode production --host 0.0.0.0 --port 3000"
   },
   "dependencies": {
     "@vueuse/core": "^12.4.0",
+    "axios": "^1.7.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "file-saver": "^2.0.5",
     "fmt": "^2.0.0",
+    "jszip": "^3.10.1",
     "lucide-vue-next": "^0.471.0",
     "pinia": "^2.3.0",
     "radix-vue": "^1.9.12",
@@ -42,6 +46,6 @@
     "typescript": "~5.6.3",
     "vite": "^6.0.5",
     "vite-plugin-vue-devtools": "^7.6.8",
-    "vue-tsc": "^2.1.10"
+    "vue-tsc": "^2.2.0"
   }
 }

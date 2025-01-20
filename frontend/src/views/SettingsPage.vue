@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
@@ -11,12 +11,18 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { User, CreditCard, Bell, Shield, Link, Globe, Github, Mail } from 'lucide-vue-next'
+import { useUserStore } from '@/stores/user'
 
 interface Tab {
   id: string
   name: string
   icon: typeof User // Using one of the icons as a type reference
 }
+
+const userStore = useUserStore()
+
+const userName = computed(() => userStore.name)
+const userEmail = computed(() => userStore.email)
 
 const tabs: Tab[] = [
   { id: 'account', name: 'Account Information', icon: User },
@@ -74,8 +80,17 @@ const activeTab = ref('account')
             <div class="space-y-5">
               <div class="flex items-center justify-between">
                 <div>
-                  <h3 class="font-medium">Name</h3>
-                  <p class="text-[#969696]">email@gmail.com</p>
+                  <h3 class="font-medium">Username</h3>
+                  <p class="text-[#969696]">{{ userName }}</p>
+                </div>
+                <Button variant="link" class="text-[#DD3592]">Edit</Button>
+              </div>
+
+              <Separator class="bg-white/10" />
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="font-medium">Email</h3>
+                  <p class="text-[#969696]">{{ userEmail }}</p>
                 </div>
                 <Button variant="link" class="text-[#DD3592]">Edit</Button>
               </div>
