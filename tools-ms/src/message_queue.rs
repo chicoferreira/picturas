@@ -36,6 +36,7 @@ impl From<Result<HandleRequestResult, HandleRequestError>> for ResponseMessageSt
                     HandleRequestError::ImageOpenError { .. } => "IMAGE_OPEN_ERROR",
                     HandleRequestError::ToolApplyError { .. } => "TOOL_APPLY_ERROR",
                     HandleRequestError::MissingOutputPath => "MISSING_OUTPUT_PATH",
+                    HandleRequestError::ImageReadError(_) => "IMAGE_READ_ERROR",
                 };
                 ResponseMessageStatus::Error(ErrorDetails {
                     code: code.into(),
@@ -71,7 +72,7 @@ async fn handle_rabbitmq_delivery(delivery: Delivery, state: &State) -> anyhow::
     info!("Received request: {request:?}");
     let message_id = request.message_id.clone();
 
-    let result = tokio::spawn(handle::handle_request(request)).await?;
+    let result = tokio::task::spawn(handle::handle_request(request)).await?;
 
     match &result {
         Ok(result) => debug!(result = ?result, "Request handled successfully"),
@@ -111,14 +112,18 @@ pub async fn run_rabbitmq_queue(mut consumer: Consumer, state: Arc<State>) {
     info!("Consumer {consumer:?} started");
 
     while let Some(delivery) = consumer.next().await {
+        let consumer_name = consumer.queue().to_string();
         match delivery {
             Ok(delivery) => {
-                if let Err(e) = handle_rabbitmq_delivery(delivery, &state).await {
-                    error!("Consumer {consumer:?} failed to handle delivery: {e}");
-                }
+                let state = state.clone();
+                tokio::spawn(async move {
+                    if let Err(e) = handle_rabbitmq_delivery(delivery, &state).await {
+                        error!("Consumer {consumer_name:?} failed to handle delivery: {e}");
+                    }
+                });
             }
             Err(error) => {
-                error!("Consumer {consumer:?} returned delivery error: {error}");
+                error!("Consumer {consumer_name:?} returned delivery error: {error}");
             }
         }
     }
