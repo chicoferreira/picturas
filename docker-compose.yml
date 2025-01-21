@@ -5,6 +5,7 @@ include:
   - bg-remover-tool-ms/docker-compose.yml
   - watermark-tool-ms/docker-compose.yml
   - api-gateway/docker-compose.yml
+  - subscriptions-ms/docker-compose.yml
   - frontend/docker-compose.yml
 
 networks:

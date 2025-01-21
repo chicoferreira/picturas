@@ -4,7 +4,7 @@
 	auto_https off
 }
 
-http://localhost {
+http:// {
 	handle /api/v1/users* {
 		@options method OPTIONS
 		respond @options "OK" 200
@@ -31,6 +31,10 @@ http://localhost {
 				versions h1 h2
 			}
 		}
+	}
+
+	handle /api/v1/subscriptions* {
+		reverse_proxy http://subscriptions-ms:8020
 	}
 
 	reverse_proxy http://frontend:3000

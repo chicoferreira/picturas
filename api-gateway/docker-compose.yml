@@ -14,6 +14,7 @@ services:
     depends_on:
       - projects-ms
       - users-ms
+      - subscriptions-ms
 volumes:
   caddy-config:
   caddy-data:
