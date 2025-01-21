@@ -44,9 +44,9 @@ services:
 
 secrets:
   stripe_secret_key:
-    file: ./stripe_secret_key
+    file: secrets/stripe_secret_key
   webhook_secret:
-    file: ./webhook_secret
+    file: secrets/webhook_secret
 
 volumes:
   db-subscriptions-ms:
