@@ -70,6 +70,12 @@ const handleSubmit = async () => {
   try {
     const response = await registerUser(form.username, form.email, form.password);
 
+    if (!response) {
+      alert('Email already exists');
+      isSubmitting.value = false
+      return
+    }
+
     useUserStore().login(
       response.name,
       response.email,

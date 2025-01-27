@@ -10,7 +10,9 @@ use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{debug_handler, Json, Router};
 use serde::{Deserialize, Serialize};
+use std::io::Cursor;
 use uuid::Uuid;
+use zip::ZipArchive;
 
 pub fn router(state: AppState) -> Router {
     let images_router = Router::new()
@@ -48,16 +50,72 @@ async fn create_image(
             .ok_or(AppError::MultipartMissing("Content-Type"))?
             .to_string();
 
-        if !content_type.starts_with("image/") {
-            return Err(AppError::NotAnImage(content_type));
-        }
-
         let data = field.bytes().await?;
 
-        let image = controller::create_image(project_id, file_name, data, &state).await?;
-        result.push(image);
+        if content_type.starts_with("image/") {
+            let image = controller::create_image(project_id, file_name, data, &state).await?;
+            result.push(image);
+        } else if content_type == "application/zip" || file_name.to_lowercase().ends_with(".zip") {
+            let state_clone = state.clone();
+            let project_id_clone = project_id;
+            let zip_data = data.to_vec();
+
+            let extracted_images =
+                tokio::task::spawn_blocking(move || -> Result<Vec<(String, Vec<u8>)>> {
+                    let cursor = Cursor::new(zip_data);
+                    let mut zip = ZipArchive::new(cursor).map_err(|_| AppError::InvalidZip)?;
+
+                    let mut images = Vec::new();
+
+                    for i in 0..zip.len() {
+                        let mut file = zip.by_index(i).map_err(|_| AppError::InvalidZip)?;
+
+                        if file.is_dir() {
+                            continue;
+                        }
+
+                        let extracted_file_name = file.name().to_string();
+
+                        if is_image_file(&extracted_file_name) {
+                            let mut buffer = Vec::with_capacity(file.size() as usize);
+                            use std::io::Read;
+                            file.read_to_end(&mut buffer)?;
+
+                            images.push((extracted_file_name, buffer));
+                        }
+                    }
+
+                    Ok(images)
+                })
+                .await
+                .map_err(|_| AppError::InternalError)??;
+
+            for (extracted_file_name, buffer) in extracted_images {
+                let image = controller::create_image(
+                    project_id_clone,
+                    extracted_file_name,
+                    buffer.into(),
+                    &state_clone,
+                )
+                .await?;
+                result.push(image);
+            }
+        } else {
+            return Err(AppError::NotAnImage(content_type));
+        }
     }
     Ok(Json(result))
+}
+
+fn is_image_file(file_name: &str) -> bool {
+    let lower = file_name.to_lowercase();
+    lower.ends_with(".png")
+        || lower.ends_with(".jpg")
+        || lower.ends_with(".jpeg")
+        || lower.ends_with(".gif")
+        || lower.ends_with(".bmp")
+        || lower.ends_with(".tiff")
+        || lower.ends_with(".webp")
 }
 
 #[derive(Debug, Serialize, Deserialize)]

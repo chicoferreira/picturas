@@ -580,16 +580,45 @@ const prevImage = () => {
 };
 
 const connectWebSocket = () => {
-  ws = new WebSocket(endpoints.project + `/ws`);
-  
+  ws = new WebSocket(endpoints.project + '/ws');
+
   ws.onmessage = (event) => {
     const message = JSON.parse(event.data);
-    console.log("MESSAGE " + message);
+
+    if (operationChain.value.length > 0 && message.tool_id === operationChain.value[operationChain.value.length - 1].toolId) {
+      showImagePreview(message.url);
+    }
   };
 
   ws.onclose = () => {
     setTimeout(connectWebSocket, 5000);
   };
+};
+
+const showImagePreview = (imageUrl) => {
+  const previewArea = document.createElement('div');
+  previewArea.style.position = 'fixed';
+  previewArea.style.top = '0';
+  previewArea.style.left = '0';
+  previewArea.style.width = '100vw';
+  previewArea.style.height = '100vh';
+  previewArea.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+  previewArea.style.display = 'flex';
+  previewArea.style.alignItems = 'center';
+  previewArea.style.justifyContent = 'center';
+  previewArea.style.zIndex = '9999';
+
+  const image = document.createElement('img');
+  image.src = imageUrl;
+  image.style.maxWidth = '90%';
+  image.style.maxHeight = '90%';
+  previewArea.appendChild(image);
+
+  previewArea.addEventListener('click', () => {
+    document.body.removeChild(previewArea);
+  });
+
+  document.body.appendChild(previewArea);
 };
 
 onMounted(async () => {

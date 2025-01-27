@@ -44,7 +44,9 @@ impl Tool {
 }
 
 fn crop(image: PhotonImage, x1: u32, x2: u32, y1: u32, y2: u32) -> PhotonImage {
-    photon_rs::transform::crop(&image, x1, x2, y1, y2)
+    let (x1, x2) = (x1.min(x2), x1.max(x2));
+    let (y1, y2) = (y1.min(y2), y1.max(y2));
+    photon_rs::transform::crop(&image, x1, y1, x2, y2)
 }
 
 fn scale(image: PhotonImage, x: u32, y: u32) -> PhotonImage {
@@ -64,10 +66,8 @@ fn adjust_brightness(mut image: PhotonImage, value: f32) -> PhotonImage {
 
     if value > 0.0 {
         photon_rs::effects::inc_brightness(&mut image, (value * 255.0) as u8);
-        println!("Increased brightness by {}", value * 255.0);
     } else {
         photon_rs::effects::dec_brightness(&mut image, (-value * 255.0) as u8);
-        println!("Decreased brightness by {}", -value * 255.0);
     }
     image
 }
@@ -111,4 +111,59 @@ fn ocr(image: PhotonImage) -> anyhow::Result<String> {
     lt.set_source_resolution(70);
 
     lt.get_utf8_text().context("Couldn't get utf8 text")
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_all_tools() {
+        use crate::tools::Tool;
+
+        let image = photon_rs::native::open_image("img.png").unwrap();
+
+        let tools = vec![
+            Tool::Crop {
+                start: (0, 0),
+                end: (100, 100),
+            },
+            Tool::Scale { x: 2000, y: 2000 },
+            Tool::AddBorder {
+                size: 10,
+                color: (255, 0, 0),
+            },
+            Tool::AdjustBrightness { value: 0.5 },
+            Tool::AdjustContrast { value: 30.0 },
+            Tool::Rotate { angle: 180.0 },
+            Tool::Blur { radius: 5 },
+            Tool::Grayscale,
+            Tool::Binarize,
+            Tool::Ocr,
+        ];
+
+        let tools_names = [
+            "crop",
+            "scale",
+            "addBorder",
+            "adjustBrightness",
+            "adjustContrast",
+            "rotate",
+            "blur",
+            "grayscale",
+            "binarize",
+            "ocr",
+        ];
+
+        for (tool, tool_name) in tools.into_iter().zip(tools_names.iter()) {
+            let result = tool.apply(image.clone()).unwrap();
+            println!("Tool: {:?}", tool_name);
+            match result {
+                crate::tools::ToolApplyResult::Image(image) => {
+                    photon_rs::native::save_image(image, format!("image_{tool_name}.png")).unwrap();
+                }
+                crate::tools::ToolApplyResult::Text(text) => {
+                    std::fs::write(format!("text_{tool_name}.txt"), text).unwrap();
+                },
+            }
+        }
+    }
 }

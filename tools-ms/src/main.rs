@@ -37,7 +37,7 @@ struct Config {
     #[serde_inline_default("guest".into())]
     rabbitmq_password: String,
     picturas_available_tools: Vec<String>,
-    #[serde_inline_default(8)]
+    #[serde_inline_default(100)]
     picturas_concurrent_requests: u16,
     #[serde_inline_default("picturas-multiple-tools-ms".into())]
     picturas_microservice_name: String,

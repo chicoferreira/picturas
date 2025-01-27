@@ -1,0 +1,52 @@
+services:
+  db-subscriptions-ms:
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DATABASE}
+    networks:
+      - picturas-network
+    volumes:
+      - db-subscriptions-ms:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -U ${PG_USER} -d ${PG_DATABASE} -h localhost
+  subscriptions-ms:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - PG_HOST
+      - PG_PORT
+      - PG_USER
+      - PG_PASSWORD
+      - PG_DATABASE
+      - PRICE_OBJECT
+      - USERS_ENDPOINT='http://localhost:8000/users'
+      - SUCCESS_URL='http://localhost:8000/success'
+      - CANCEL_URL='http://localhost:8000/cancel'
+      - ACCESS_TOKEN_PUBLIC_KEY=/run/secrets/access_token_public_key
+      - STRIPE_SECRET_KEY=/run/secrets/stripe_secret_key
+      - WEBHOOK_SECRET=/run/secrets/webhook_secret
+    secrets:
+      - stripe_secret_key
+      - webhook_secret
+      - access_token_public_key
+    networks:
+      - picturas-network
+    depends_on:
+      db-subscriptions-ms:
+        condition: service_healthy
+    env_file:
+      - .env
+
+secrets:
+  stripe_secret_key:
+    file: secrets/stripe_secret_key
+  webhook_secret:
+    file: secrets/webhook_secret
+
+volumes:
+  db-subscriptions-ms:

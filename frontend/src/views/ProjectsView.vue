@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { SearchIcon, PlusIcon, PencilIcon } from 'lucide-vue-next'
+import { SearchIcon, PlusIcon, PencilIcon, Trash2, ImageUp } from 'lucide-vue-next'
 import { useUserStore } from '@/stores/user'
 import { useAuth } from '@/lib/auth'
 import { Card, CardFooter } from '@/components/ui/card'
@@ -172,6 +172,50 @@ const filteredProjects = computed(() => {
   return projects.value.filter((p) => p.name.toLowerCase().includes(query))
 })
 
+async function uploadZip(projectId: string) {
+  try {
+    // Step 1: Prompt user to select a zip file
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.zip'
+
+    return new Promise<void>((resolve, reject) => {
+      input.onchange = async () => {
+        const file = input.files?.[0]
+        if (!file) return reject('No file selected')
+
+        const formData = new FormData()
+        formData.append('File', file) // Match the server's expected key name
+
+        // Step 2: Make the POST request
+        try {
+          const response = await authFetch(`${API_BASE}/projects/${projectId}/images`, {
+            method: 'POST',
+            credentials: 'include',
+            body: formData,
+          })
+
+          if (!response.ok) {
+            alert(`Failed to upload zip file: ${response.statusText}`)
+          }
+
+          // Step 3: Success handling
+          alert('Zip file uploaded successfully!')
+          resolve()
+        } catch (error) {
+          console.error('Error uploading zip file:', error)
+          alert('Error uploading zip file')
+          reject(error)
+        }
+      }
+
+      input.click()
+    })
+  } catch (error) {
+    console.error('Error in uploadZip:', error)
+  }
+}
+
 onMounted(() => {
   loadProjects()
 })
@@ -283,7 +327,15 @@ onMounted(() => {
                 class="text-red-500 hover:text-red-400 hover:bg-red-500/20"
                 @click="deleteProject(project.id)"
               >
-                <span class="i-lucide-trash-2 h-4 w-4" />
+              <Trash2 class="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                class="text-[#969696] hover:text-white hover:bg-[#6D28D9]/20"
+                @click="uploadZip(project.id)"
+              >
+                <ImageUp class="h-4 w-4" />
               </Button>
             </div>
           </CardFooter>

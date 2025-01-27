@@ -31,6 +31,10 @@ pub enum AppError {
     JwtError(#[from] jsonwebtoken::errors::Error),
     #[error(transparent)]
     ZipError(#[from] zip::result::ZipError),
+    #[error("invalid zip file")]
+    InvalidZip,
+    #[error("internal error")]
+    InternalError,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -53,6 +57,8 @@ impl IntoResponse for AppError {
             AppError::JwtError(_) => StatusCode::UNAUTHORIZED,
             AppError::ZipError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Forbidden => StatusCode::FORBIDDEN,
+            AppError::InvalidZip => StatusCode::BAD_REQUEST,
+            AppError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
         let error = match self {
@@ -67,6 +73,8 @@ impl IntoResponse for AppError {
             AppError::JwtError(_) => "Invalid token".to_string(),
             AppError::ZipError(_) => "Internal zip error".to_string(),
             AppError::Forbidden => "No permission".to_string(),
+            AppError::InvalidZip => "Invalid zip file".to_string(),
+            AppError::InternalError => "Internal error".to_string(),
         };
 
         let body = ErrorBody { error };

@@ -1,8 +1,11 @@
+use crate::handle::HandleRequestError::{
+    ImageOpenError, ImageReadError, ImageSaveCreateFoldersError, ImageSaveError, ToolApplyError,
+};
 use crate::message::RequestMessage;
 use crate::tools;
-use snafu::prelude::*;
 use std::path::PathBuf;
-use tracing::{info, span};
+use thiserror::Error;
+use tracing::{info, instrument};
 
 #[derive(Debug)]
 pub enum HandleRequestResult {
@@ -10,40 +13,37 @@ pub enum HandleRequestResult {
     Text(String),
 }
 
-#[derive(Debug, Snafu)]
+#[derive(Debug, Error)]
 pub enum HandleRequestError {
-    #[snafu(display("Failed to save image"))]
-    ImageSaveError {
-        source: photon_rs::native::Error,
-        path: PathBuf,
-    },
-    #[snafu(display("Failed to create folders"))]
-    ImageSaveCreateFoldersError { source: tokio::io::Error },
-    #[snafu(display("Failed to open image"))]
-    ImageOpenError {
-        source: photon_rs::native::Error,
-        path: PathBuf,
-    },
-    #[snafu(display("Failed to apply tool"))]
-    ToolApplyError { source: anyhow::Error },
-    #[snafu(display("Missing output path"))]
+    #[error("Failed to save image: {0}")]
+    ImageSaveError(photon_rs::native::Error),
+    #[error("Failed to create folders: {0}")]
+    ImageSaveCreateFoldersError(tokio::io::Error),
+    #[error("Failed to open image: {0}")]
+    ImageOpenError(tokio::io::Error),
+    #[error("Failed to read image: {0}")]
+    ImageReadError(photon_rs::native::Error),
+    #[error("Failed to apply tool: {0}")]
+    ToolApplyError(anyhow::Error),
+    #[error("Missing output path")]
     MissingOutputPath,
 }
 
+#[instrument(skip(request), fields(message_id = request.message_id))]
 pub async fn handle_request(
     request: RequestMessage,
 ) -> Result<HandleRequestResult, HandleRequestError> {
-    let span = span!(tracing::Level::INFO, "handle_request", message_id = %request.message_id);
-    let _enter = span.enter();
-
     info!("Handling request");
     let path = request.params.image_uris.input_image_uri;
-    let image = photon_rs::native::open_image(&path).context(ImageOpenSnafu { path })?;
+    let image_bytes = tokio::fs::read(&path.clone())
+        .await
+        .map_err(ImageOpenError)?;
+    let image = photon_rs::native::open_image_from_bytes(&image_bytes).map_err(ImageReadError)?;
     info!(
         raw_pixels_len = image.get_raw_pixels().len(),
         "Loaded image"
     );
-    let result = request.params.tool.apply(image).context(ToolApplySnafu)?;
+    let result = request.params.tool.apply(image).map_err(ToolApplyError)?;
 
     let result_name = match &result {
         tools::ToolApplyResult::Image(img) => format!("image({})", img.get_raw_pixels().len()),
@@ -59,11 +59,10 @@ pub async fn handle_request(
                 if let Some(p) = path.parent() {
                     tokio::fs::create_dir_all(p)
                         .await
-                        .context(ImageSaveCreateFoldersSnafu)?;
+                        .map_err(ImageSaveCreateFoldersError)?;
                 }
 
-                photon_rs::native::save_image(image, &path)
-                    .context(ImageSaveSnafu { path: path.clone() })?;
+                photon_rs::native::save_image(image, &path).map_err(ImageSaveError)?;
                 Ok(HandleRequestResult::Image(path))
             } else {
                 Err(HandleRequestError::MissingOutputPath)
