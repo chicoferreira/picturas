@@ -257,7 +257,7 @@ const operationChain = ref([]);
 const showApplyDialog = ref(false);
 const showClearDialog = ref(false);
 const showPreviewDialog  =ref(false);
-const API_BASE = process.env.VITE_API_BASE  || 'http://localhost:80/api/v1';
+const API_BASE = process.env.VITE_API_BASE  || 'https://f.primecog.com/api/v1';
 const endpoints = {
   project: `${API_BASE}/projects/${projectId}`,
   images: `${API_BASE}/projects/${projectId}/images`,
