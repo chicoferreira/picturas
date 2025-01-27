@@ -252,8 +252,6 @@ const maxWIDTH = ref(1920);
 const maxHEIGHT = ref(1080); 
 let ws = null;
 let selectedVersions = ref([]);
-console.log("Project id " + projectId);
-console.log("API_BASE = " + API_BASE)
 const openApplyDialog = () => {
   showApplyDialog.value = true;
 };
@@ -368,16 +366,24 @@ const confirmClearChain = async () => {
 
 const confirmApplyChain = async () => {
   try {
-    console.log('Applying chain:', operationChain.value);
+    let imageIds = [];
+    for (let i = 0; i < images.value.length; i++) {
+      imageIds.push(images.value[i].id);
+    }
+    console.log('Applying image:', imageIds);
     let response = await authFetch(endpoints.applyTools, {
       method: 'POST',
       credentials: 'include', 
       headers: {
           'Content-Type': 'application/json'
       },
-      body: JSON.stringify({})
+      body: JSON.stringify({
+        "filter_images":imageIds
+      })
     })
     closeApplyDialog();
+    response = await response.json();
+    console.log("Response" + JSON.stringify(response));
   } catch (error) {
     console.error('Error applying operation chain:', error);
   }
@@ -583,6 +589,7 @@ const connectWebSocket = () => {
   ws = new WebSocket(endpoints.project + '/ws');
 
   ws.onmessage = (event) => {
+    console.log("Received message: " + event)
     const message = JSON.parse(event.data);
 
     if (operationChain.value.length > 0 && message.tool_id === operationChain.value[operationChain.value.length - 1].toolId) {
@@ -649,8 +656,7 @@ onMounted(async () => {
       image.data = await convertBlobToBase64(blob);  // Fixed FileReader usage
       return image;
     }));
-
-    console.log("Images:", JSON.stringify(images.value));
+    console.log("IMAGES DATA " + JSON.stringify(imagesData));
     operationChain.value = toolsData;
   } catch (error) {
     console.error("Error during onMounted:", error.message);

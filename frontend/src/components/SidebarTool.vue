@@ -1,7 +1,7 @@
 <template>
     <aside class="w-full h-full p-4 flex flex-col gap-4">
       <!-- Tools List -->
-      <div class="space-y-2">
+      <div class="space-y-1">
         <Button
           v-for="tool in tools"
           :key="tool.name"
@@ -16,7 +16,7 @@
       </div>
   
       <!-- Tool Settings -->
-      <div v-if="showSettings" class="space-y-1">
+      <div v-if="showSettings" class="space-y-0">
         <Separator />
         <div class="flex items-center justify-between">
           <h3 class="text-lg font-semibold">{{ selectedTool.label }} Settings</h3>
@@ -30,7 +30,7 @@
           </Button>
         </div>
   
-        <div v-for="(value, key) in currentToolValues" :key="key" class="space-y-1">
+        <div v-for="(value, key) in currentToolValues" :key="key" class="space-y-0">
           <Label :for="key">{{ formatLabel(key) }}</Label>
   
           <!-- Color Input with Preview -->
@@ -138,7 +138,7 @@
     { name: 'adjustContrast', label: 'Contrast', icon: Contrast },
     { name: 'rotate', label: 'Rotate', icon: RotateCw },
     { name: 'blur', label: 'Blur', icon: Cloud },
-    { name: 'ocr', label: 'OCR', icon: Type },
+   // { name: 'ocr', label: 'OCR', icon: Type },
     {name: 'watermark', label: 'Add Watermark', icon:Droplet},
     {name: 'bgRemover', label: 'Remove Background', icon:ImageOff},
     {name: 'grayscale', label: 'Grayscale', icon:markRaw(GrayscaleIcon)},
@@ -160,9 +160,14 @@
   const handleNumericInput = (key, value) => {
     const min = getMinValue(key);
     const max = getMaxValue(key);
-    const clampedValue = Math.min(Math.max(value || min, min), max);
     
-    currentToolValues.value[key] = clampedValue;
+    if (value < min){
+      currentToolValues.value[key] = min;
+    }else if (value > max){
+      currentToolValues.value[key] = max;
+    }else {
+      currentToolValues.value[key] = value;
+    } 
     emit('update-tool-values', { ...currentToolValues.value });
   };
   
@@ -186,8 +191,8 @@
   
   const getMaxValue = (key) => {
     if (props.selectedTool.name === 'crop') {
-      if (key.includes('X')) return 10000;
-      if (key.includes('Y')) return 10000;
+      if (key.includes('X')) return 1920;
+      if (key.includes('Y')) return 1080;
     }
     if (key === 'borderSize') {
       return Math.min(props.imageSize.width || 100, props.imageSize.height || 100) / 2;

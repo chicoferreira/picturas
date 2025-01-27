@@ -197,7 +197,8 @@ const downloadProject = async () => {
           data: e.target.result,
           name: file.name,
           width: img.width,
-          height: img.height
+          height: img.height,
+          file: file
         });
       };
       reader.readAsDataURL(file);

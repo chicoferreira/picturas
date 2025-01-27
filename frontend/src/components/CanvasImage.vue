@@ -21,7 +21,7 @@
           <!-- Main Image -->
           <img
             v-if="image"
-            :src="image.image"
+            :src="image"
             class="max-w-full max-h-full"
             @load="onImageLoad"
             alt="Editable image"
@@ -253,7 +253,7 @@
       let newAngle = initialAngle + angleDiff;
       
       // Normalize angle to range [-180, 180]
-      newAngle = ((newAngle + 180) % 360) - 180;
+      newAngle = newAngle == 0 ? 0 : ((newAngle + 180) % 360) - 180;
       
       emit('update-tool-data', { angle: newAngle });
     };
