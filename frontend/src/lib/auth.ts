@@ -2,7 +2,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
 export function useAuth() {
-  const API_BASE = 'https://f.primecog.com/api/v1';
+  const API_BASE = 'https://f.primecog.com/api/v1/';
   const router = useRouter()
 
   const registerUser = async (username: string, email: string, password: string) => {
