@@ -134,6 +134,7 @@
     <div v-if="operationChain.length > 0" class="flex space-x-2">
       <Button class="flex-1" @click="openApplyDialog">Apply Chain</Button>
       <Button variant="outline" class="flex-1" @click="openClearDialog">Clear Chain</Button>
+      <Button variant="secondary" class="flex-1" @click="openPreviewDialog">Preview Current Image</Button>
     </div>
   </div>
 
@@ -162,6 +163,22 @@
   </Dialog>
       </div>
     </div>
+
+        <!-- Preview Dialog -->
+        <AlertDialog :open="showPreviewDialog">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Preview Chain on Current Image</AlertDialogTitle>
+          <AlertDialogDescription>
+            Preview the operation chain on the current image?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="closePreviewDialog">Cancel</AlertDialogCancel>
+          <AlertDialogAction @click="confirmPreview">Preview</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
 
     <!-- Apply Chain Dialog -->
     <AlertDialog :open="showApplyDialog">
@@ -239,6 +256,7 @@ const imageSize = ref({ width: 0, height: 0 });
 const operationChain = ref([]);
 const showApplyDialog = ref(false);
 const showClearDialog = ref(false);
+const showPreviewDialog  =ref(false);
 const API_BASE = process.env.VITE_API_BASE  || 'http://localhost:80/api/v1';
 const endpoints = {
   project: `${API_BASE}/projects/${projectId}`,
@@ -268,17 +286,25 @@ const closeClearDialog = () => {
   showClearDialog.value = false;
 };
 
+const openPreviewDialog = () => {
+  showPreviewDialog.value = true;
+};
+
+const closePreviewDialog = () => {
+  showPreviewDialog.value = false;
+};
+
+
+
 const handleNewImage = async (imageData) => {
   const formData  = new FormData();
   formData.append(`File`, imageData.file);
-  console.log("Posting image");
   let response = await authFetch(endpoints.images, {
     method: "POST",
     credentials: 'include',
     body: formData
   })
   response = await response.json();
-  console.log("images.value " + images.value);
   images.value.push({
     id: response[0].id,
     data: imageData.data});
@@ -364,13 +390,34 @@ const confirmClearChain = async () => {
   closeClearDialog();
 };
 
+const confirmPreview = async () => {
+  try {
+     ('Previewing current image:', images.value[currentImageIndex.value].id);
+    let response = await authFetch(endpoints.applyTools, {
+      method: 'POST',
+      credentials: 'include', 
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        "filter_images": [images.value[currentImageIndex.value].id]
+      })
+    });
+    closePreviewDialog();
+    response = await response.json();
+     ("Preview Response:", JSON.stringify(response));
+  } catch (error) {
+    console.error('Error previewing operation chain:', error);
+  }
+};
+
 const confirmApplyChain = async () => {
   try {
     let imageIds = [];
     for (let i = 0; i < images.value.length; i++) {
       imageIds.push(images.value[i].id);
     }
-    console.log('Applying image:', imageIds);
+     ('Applying image:', imageIds);
     let response = await authFetch(endpoints.applyTools, {
       method: 'POST',
       credentials: 'include', 
@@ -383,7 +430,7 @@ const confirmApplyChain = async () => {
     })
     closeApplyDialog();
     response = await response.json();
-    console.log("Response" + JSON.stringify(response));
+     ("Response" + JSON.stringify(response));
   } catch (error) {
     console.error('Error applying operation chain:', error);
   }
@@ -412,7 +459,7 @@ const convertToBackendFormat = (toolName, data) => {
   switch (toolName) {
     case 'crop':
       return {
-        Crop: {
+        crop: {
           start: [
             Math.min(Math.round(cleanData.startX), Math.round(cleanData.endX)),
             Math.min(Math.round(cleanData.startY), Math.round(cleanData.endY))
@@ -425,14 +472,14 @@ const convertToBackendFormat = (toolName, data) => {
       };
     case 'scale':
       return {
-        Scale: {
+        scale: {
           x: Math.round(cleanData.scaleX),
           y: Math.round(cleanData.scaleY)
         }
       };
     case 'addBorder':
       return {
-        AddBorder: {
+        addBorder: {
           size: Math.round(cleanData.borderSize),
           color: hexToRgb(cleanData.borderColor)
         }
@@ -445,30 +492,30 @@ const convertToBackendFormat = (toolName, data) => {
       };
     case 'adjustContrast':
       return {
-        AdjustContrast: {
+        adjustContrast: {
           value: parseFloat(cleanData.contrast)
         }
       };
     case 'rotate':
       return {
-        Rotate: {
+        rotate: {
           angle: parseFloat(cleanData.angle)
         }
       };
     case 'blur':
       return {
-        Blur: {
+        blur: {
           radius: Math.round(cleanData.blurRadius)
         }
       };
     case 'watermark':
-      return { AddWatermark: null };
+      return { addWatermark: null };
     case 'bgRemover':
-      return { BgRemover: null };
+      return { bgRemover: null };
     case 'grayscale':
-      return { Grayscale: null };
+      return { grayscale: null };
     case 'binarization':
-      return { Binarization: null };
+      return { binarization: null };
     default:
       return null;
   }
@@ -587,12 +634,12 @@ const prevImage = () => {
 
 const connectWebSocket = () => {
   ws = new WebSocket(endpoints.project + '/ws');
-
+   ("WS LINK " + ws.url);
   ws.onmessage = (event) => {
-    console.log("Received message: " + event)
+     ("Received message: " + event)
     const message = JSON.parse(event.data);
 
-    if (operationChain.value.length > 0 && message.tool_id === operationChain.value[operationChain.value.length - 1].toolId) {
+    if (operationChain.value.length > 0 && message.tool_id === operationChain.value[operationChain.value.length - 1].id) {
       showImagePreview(message.url);
     }
   };
@@ -656,7 +703,6 @@ onMounted(async () => {
       image.data = await convertBlobToBase64(blob);  // Fixed FileReader usage
       return image;
     }));
-    console.log("IMAGES DATA " + JSON.stringify(imagesData));
     operationChain.value = toolsData;
   } catch (error) {
     console.error("Error during onMounted:", error.message);
