@@ -8,7 +8,7 @@ import { SearchIcon, PlusIcon, PencilIcon, Trash2, ImageUp } from 'lucide-vue-ne
 import { useUserStore } from '@/stores/user'
 import { useAuth } from '@/lib/auth'
 import { Card, CardFooter } from '@/components/ui/card'
-const API_BASE = import.meta.env.VITE_API_BASE  || 'https://f.primecog.com/api/v1/';
+const API_BASE = import.meta.env.VITE_API_BASE  || 'https://f.primecog.com/api/v1';
 const router = useRouter()
 const userStore = useUserStore()
 
