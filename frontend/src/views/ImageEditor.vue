@@ -633,7 +633,7 @@ const prevImage = () => {
 };
 
 const connectWebSocket = () => {
-  ws = new WebSocket('wss' + endpoints.project.substring(4) + '/ws');
+  ws = new WebSocket('wss' + endpoints.project.substring('https'.size()) + '/ws');
    ("WS LINK " + ws.url);
   ws.onmessage = (event) => {
      ("Received message: " + event)
