@@ -100,7 +100,7 @@
       <div class="flex space-x-2">
         <div 
           v-for="(op, index) in operationChain" 
-          :key="op.toolId" 
+          :key="op.id" 
           class="flex-shrink-0 w-[200px] flex flex-col bg-accent/50 p-4 rounded"
         >
           <div class="flex items-center justify-between mb-2">
@@ -232,7 +232,7 @@ const projectId = route.params.id;
 const loading = ref(true);
 const error = ref(null);
 const sidebarWidth = ref(200);
-const images = ref(['/placeholder']);
+const images = ref([]);
 const currentImageIndex = ref(0);
 const zoom = ref(1);
 const imageSize = ref({ width: 0, height: 0 });
@@ -270,8 +270,20 @@ const closeClearDialog = () => {
   showClearDialog.value = false;
 };
 
-const handleNewImage = (imageData) => {
-  images.value.push(imageData.data);
+const handleNewImage = async (imageData) => {
+  const formData  = new FormData();
+  formData.append(`File`, imageData.file);
+  console.log("Posting image");
+  let response = await authFetch(endpoints.images, {
+    method: "POST",
+    credentials: 'include',
+    body: formData
+  })
+  response = await response.json();
+  console.log("images.value " + images.value);
+  images.value.push({
+    id: response[0].id,
+    data: imageData.data});
   currentImageIndex.value = images.value.length - 1;
 };
 
@@ -282,7 +294,7 @@ const selectedTool = ref({
   values: {}
 });
 
-const currentImage = computed(() => images.value[currentImageIndex.value]);
+const currentImage = computed(() => images.value[currentImageIndex.value] ? images.value[currentImageIndex.value].data : []);
 
 const onToolSelect = (tool) => {
   selectedTool.value = {
@@ -306,31 +318,65 @@ const updateToolData = (data) => {
 const addToChain =async (data) => {
   const operation = convertToBackendFormat(selectedTool.value.name, data);
   if (operation) {
-    const [toolName, parameters] = Object.entries(operation)[0];
-    console.log("procedure " + toolName + " parameters " + parameters);
-    let response =await authFetch(endpoints.tools, {
+    const [toolName, Nparameters] = Object.entries(operation)[0];
+    let tempChain = operationChain.value;
+    tempChain.push({
       procedure: toolName,
-      parameters
-    });
+      parameters: Nparameters
+    })
+    let response = await authFetch(endpoints.tools, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+          'Content-Type': 'application/json'
+      },
+      body:JSON.stringify(tempChain)});
 
-    operationChain.value.push(response.data);
+    response = await response.json();
+    operationChain.value = response;
   }
 };
 
-const removeFromChain = (index) => {
+const removeFromChain = async (index) => {
   operationChain.value.splice(index, 1);
+  let response = await authFetch(endpoints.tools, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+          'Content-Type': 'application/json'
+      },
+      body:JSON.stringify(operationChain.value)});
+
+    response = await response.json();
+    operationChain.value = response;
 };
 
-const confirmClearChain = () => {
+const confirmClearChain = async () => {
   operationChain.value = [];
+  let response = await authFetch(endpoints.tools, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+          'Content-Type': 'application/json'
+      },
+      body:JSON.stringify(operationChain.value)});
+
+    response = await response.json();
+    operationChain.value = response;
   closeClearDialog();
 };
 
 const confirmApplyChain = async () => {
   try {
     console.log('Applying chain:', operationChain.value);
-    // await applyOperationChain(operationChain.value);
-    operationChain.value = [];
+    let response = await authFetch(endpoints.applyTools, {
+      method: 'POST',
+      credentials: 'include', 
+      headers: {
+          'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({})
+    })
     closeApplyDialog();
   } catch (error) {
     console.error('Error applying operation chain:', error);
@@ -354,67 +400,73 @@ const formatParameters = (params) => {
 };
 
 const convertToBackendFormat = (toolName, data) => {
+  // Create clean copies of the data to prevent circular references
+  const cleanData = JSON.parse(JSON.stringify(data));
+  
   switch (toolName) {
     case 'crop':
       return {
         Crop: {
-          start: [Math.min(Math.round(data.startX), Math.round(data.endX)), Math.min(Math.round(data.startY), Math.round(data.endY))],
-          end: [Math.max(Math.round(data.startX), Math.round(data.endX)), Math.max(Math.round(data.startY), Math.round(data.endY))]
+          start: [
+            Math.min(Math.round(cleanData.startX), Math.round(cleanData.endX)),
+            Math.min(Math.round(cleanData.startY), Math.round(cleanData.endY))
+          ],
+          end: [
+            Math.max(Math.round(cleanData.startX), Math.round(cleanData.endX)),
+            Math.max(Math.round(cleanData.startY), Math.round(cleanData.endY))
+          ]
         }
       };
     case 'scale':
       return {
         Scale: {
-          x: Math.round(data.scaleX),
-          y: Math.round(data.scaleY)
+          x: Math.round(cleanData.scaleX),
+          y: Math.round(cleanData.scaleY)
         }
       };
     case 'addBorder':
       return {
         AddBorder: {
-          size: Math.round(data.borderSize),
-          color: hexToRgb(data.borderColor)
+          size: Math.round(cleanData.borderSize),
+          color: hexToRgb(cleanData.borderColor)
         }
       };
     case 'adjustBrightness':
       return {
         AdjustBrightness: {
-          value: Math.round(data.brightness)
+          value: Math.round(cleanData.brightness)
         }
       };
     case 'adjustContrast':
       return {
         AdjustContrast: {
-          value: data.contrast
+          value: parseFloat(cleanData.contrast)
         }
       };
     case 'rotate':
       return {
         Rotate: {
-          angle: data.angle
+          angle: parseFloat(cleanData.angle)
         }
       };
     case 'blur':
       return {
         Blur: {
-          radius: Math.round(data.blurRadius)
+          radius: Math.round(cleanData.blurRadius)
         }
       };
-//   case 'ocr':
-//     return { Ocr: null };
-    case 'addWatermark':
-      return { addWatermark: null };
+    case 'watermark':
+      return { AddWatermark: null };
     case 'bgRemover':
-      return { bgRemover: null };
+      return { BgRemover: null };
     case 'grayscale':
-      return { grayscale: null };
+      return { Grayscale: null };
     case 'binarization':
-      return { binarization: null };
+      return { Binarization: null };
     default:
       return null;
   }
 };
-
 const hexToRgb = (hex) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result ? [
@@ -500,7 +552,7 @@ const onImageLoad = (size) => {
 
 const removeCurrentImage = async () => {
   if (images.value.length > 0) {
-    await authFetch(endpoints.images + "/" + images.value[currentImageIndex.value], {
+    await authFetch(endpoints.images + "/" + images.value[currentImageIndex.value].id, {
       method: "DELETE",
       credentials: `include`
     })
@@ -532,6 +584,7 @@ const connectWebSocket = () => {
   
   ws.onmessage = (event) => {
     const message = JSON.parse(event.data);
+    console.log("MESSAGE " + message);
   };
 
   ws.onclose = () => {
@@ -541,36 +594,51 @@ const connectWebSocket = () => {
 
 onMounted(async () => {
   try {
-    const [imagesResponse, toolsResponse] = await Promise.all([
-    authFetch(endpoint.images, {
-      method: 'GET',
-      credentials: 'include'
-    }),
-    authFetch(endpoint.tools, {
-      method: 'GET',
-      credentials: 'include'
-    })
+    let [imagesResponse, toolsResponse] = await Promise.all([
+      authFetch(endpoints.images, {
+        method: 'GET',
+        credentials: 'include'
+      }),
+      authFetch(endpoints.tools, {
+        method: 'GET',
+        credentials: 'include'
+      })
     ]);
 
+    // Parse JSON responses
+    const imagesData = await imagesResponse.json();
+    const toolsData = await toolsResponse.json();
 
-    images.value = imagesResponse.data;
-    images.value = await Promise.all(images.value.map(async image =>{
-      image.image = await authFetch(endpoints.images + '/'+ image.id, {
+    // Update reactive variables
+    images.value = await Promise.all(imagesData.map(async (image) => {
+      const response = await authFetch(image.url, {
         method: 'GET',
         credentials: 'include'
       });
+
+      const blob = await response.blob();
+      image.data = await convertBlobToBase64(blob);  // Fixed FileReader usage
       return image;
-    }  ))
-    
-    operationChain.value = toolsResponse.data;
+    }));
 
-
-  } catch (err) {
-    error.value = err.response?.data?.message || 'Failed to load project';
-  }finally {
+    console.log("Images:", JSON.stringify(images.value));
+    operationChain.value = toolsData;
+  } catch (error) {
+    console.error("Error during onMounted:", error.message);
+  } finally {
     loading.value = false;
   }
 });
+
+// Utility function to convert Blob to Base64
+function convertBlobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);  // reader.result contains the Base64 string
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);  // This converts the blob to a base64 string
+  });
+}
 
 onMounted(() => {
   connectWebSocket();
